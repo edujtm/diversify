@@ -1,16 +1,19 @@
 """
 
+    This module makes the connection to the spotify WEB API to get information
+    on the user music preferences. It is able to write csv files for playlists
+    to be analyzed with future modules.
 """
 
 import spotipy
 import spotipy.util as util
 import sys
-import getpass as gp
 
 _client_id = '5d6d117598a94245a84a726981fa6e3b'
 _client_secret = '75df15e303d043a5ad6e65251de5a384'
-_redirect_uri='http://localhost/'
+_redirect_uri = 'http://localhost/'
 _scope = ['user-library-read', 'playlist-modify-private']
+
 
 def login_user(username, scope=None):
     """
@@ -27,11 +30,13 @@ def login_user(username, scope=None):
         scope = _scope
 
     # TODO check if empty scope array will break the api call
-    token = util.prompt_for_user_token(username, ' '.join(scope), client_id=_client_id, client_secret=_client_secret, redirect_uri=_redirect_uri)
+    token = util.prompt_for_user_token(username, ' '.join(scope), client_id=_client_id, client_secret=_client_secret,
+                                       redirect_uri=_redirect_uri)
     if token:
         return spotipy.Spotify(auth=token)
     else:
         print("Not able to get token for:", username)
+
 
 def get_favourite_music(spfy, limit=20):
     """
@@ -50,8 +55,44 @@ def get_favourite_music(spfy, limit=20):
     return results
 
 
-def write_csv_from_spfy():
+def get_public_playlists(spfy, userid, limit=50, offset=0):
+    playlists = spfy.user_playlists(userid, limit, offset)
+    return playlists
+
+def show_tracks(tracks):
+    for idx, item in enumerate(tracks['items']):
+        track = item['track']
+        print("{0} {1:32.32s} {2:s}".format(idx, track['artists'][0]['name'], track['name']))
+
+
+def wcsv_from_playlists(spfy, userid, limit=30):
+    if limit > 50:
+        print("Limit value cannot be greater than 50")
+        return False
+
+    playlists = spfy.user_playlists(userid)
+    for playlist in playlists['items']:
+        if playlist['owner']['id'] == userid:
+            results = spfy.user_playlist(userid, playlist['id'], fields="tracks,next")
+            tracks = results['tracks']
+            #print(tracks)
+            #show_tracks(tracks=tracks)
+            while tracks['next']:
+                tracks = spfy.next(tracks)
+                trackids = ['' + item['track']['id'] for item in tracks['items']]
+                maxvalue = len(trackids) if len(trackids) < limit else limit+1       # limit+1 necessary for slicing
+                print(spfy.audio_features(trackids[:maxvalue]))
+    # TODO write csv with custom name for each user. check if file already exists. do not override for simplicity
+    return True
+
+def wcsv_audio_analysis(analysis):
+    # TODO write caracteristics of a song to a csv file (search useful characterists)
+    for item in analysis:
+        pass
+
+def wcsv_from_playlist(playlist):
     pass
+
 
 if __name__ == '__main__':
 
@@ -61,7 +102,8 @@ if __name__ == '__main__':
     else:
         username = sys.argv[1]
 
-    print("This is a sample program that will search for your saved songs and write them to a csv file in csvfile/ folder")
+    print(
+        "This is a sample program that will search for your saved songs and write them to a csv file in csvfile/ folder")
     spfy = login_user(username)
 
     result = get_favourite_music(spfy)
@@ -69,3 +111,7 @@ if __name__ == '__main__':
     for item in result['items']:
         track = item['track']
         print(track['id'], '-', track['name'], '-', track['artists'][0]['name'])
+
+    # print(spfy.current_user())
+    #print(spfy.user_playlist('biasusan'))
+    wcsv_from_playlists(spfy, 'biasusan')
