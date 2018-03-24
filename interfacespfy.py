@@ -3,11 +3,20 @@
     This module makes the connection to the spotify WEB API to get information
     on the user music preferences. It is able to write csv files for playlists
     to be analyzed with future modules.
+
+    The goal with this module is to make the spotify data available in a simple
+    way for local analysis and interactive analysis with ipython or a jupyter
+    notebook.
+
+    This is an experimental project so the preferences are being saved in csv
+    files but the music data should be saved in a database or not saved at
+    all for privacy reasons.
 """
 
 import spotipy
 import spotipy.util as util
 import sys
+import csv
 
 _client_id = '5d6d117598a94245a84a726981fa6e3b'
 _client_secret = '75df15e303d043a5ad6e65251de5a384'
@@ -46,7 +55,7 @@ def get_favourite_music(spfy, limit=20):
     If that's not the case add it in the interfacespfy.scope array and refresh
     the token.
 
-    :param token: token received when logging user
+    :param spfy: spfy object received when logging user
     :param limit: maximum of musics that will be returned from query
     :return: spotipy object that reprensents the user's starred music
 
@@ -59,36 +68,58 @@ def get_public_playlists(spfy, userid, limit=50, offset=0):
     playlists = spfy.user_playlists(userid, limit, offset)
     return playlists
 
+
 def show_tracks(tracks):
     for idx, item in enumerate(tracks['items']):
         track = item['track']
-        print("{0} {1:32.32s} {2:s}".format(idx, track['artists'][0]['name'], track['name']))
+        print("{0} {1:32.32s} {2:s} - {3}".format(idx, track['artists'][0]['name'], track['name'], track['id']))
 
 
-def wcsv_from_playlists(spfy, userid, limit=30):
+def wcsv_from_playlists(spfy, userid, limit=30, filename=None):
     if limit > 50:
         print("Limit value cannot be greater than 50")
         return False
 
+    if filename is None:
+        filename = str(userid) + "features.csv"
+
+    try:
+        csvfile = open('csvfiles/' + filename, 'w')             # Needs to be here so the call to open occurs only once
+    except FileExistsError:
+        print("File already exists locally in csvfiles/{0}. Remove it and rerun to update.".format(filename))
+        return False
+
+    # Start the writer and writes the header for the track analysis
+    fields = ['uri', 'speechiness', 'valence', 'mode', 'liveness', 'key', 'danceability', 'loudness', 'acousticness', 'instrumentalness', 'energy', 'tempo']
+    csvwriter = csv.DictWriter(csvfile, fieldnames=fields)
+    csvwriter.writeheader()
+
     playlists = spfy.user_playlists(userid)
     for playlist in playlists['items']:
         if playlist['owner']['id'] == userid:
-            results = spfy.user_playlist(userid, playlist['id'], fields="tracks,next")
+            results = spfy.user_playlist(userid, playlist['id'], fields="tracks,next")     # return a playlist object
             tracks = results['tracks']
-            #print(tracks)
-            #show_tracks(tracks=tracks)
-            while tracks['next']:
-                tracks = spfy.next(tracks)
-                trackids = ['' + item['track']['id'] for item in tracks['items']]
-                maxvalue = len(trackids) if len(trackids) < limit else limit+1       # limit+1 necessary for slicing
-                print(spfy.audio_features(trackids[:maxvalue]))
-    # TODO write csv with custom name for each user. check if file already exists. do not override for simplicity
+            # print(tracks)
+            show_tracks(tracks=tracks)
+            features = _get_features_with_limit(spfy, tracks, limit)
+            _wcsv_audio_analysis(features, csvwriter, fields)
+
+    csvfile.close()
     return True
 
-def wcsv_audio_analysis(analysis):
+
+def _get_features_with_limit(spfy, tracks, limit):
+    trackids = [item['track']['id'] for item in tracks['items']]
+    maxvalue = len(trackids) if len(trackids) < limit else limit+1       # limit+1 necessary for slicing
+    return spfy.audio_features(trackids[:maxvalue])
+
+
+def _wcsv_audio_analysis(analysis, csvwriter, fields):
     # TODO write caracteristics of a song to a csv file (search useful characterists)
-    for item in analysis:
-        pass
+    for track in analysis:
+        ftrack = {field : track[field] for field in fields}
+        csvwriter.writerow(ftrack)
+
 
 def wcsv_from_playlist(playlist):
     pass
@@ -102,6 +133,7 @@ if __name__ == '__main__':
     else:
         username = sys.argv[1]
 
+    print("Logging:", username)
     print(
         "This is a sample program that will search for your saved songs and write them to a csv file in csvfile/ folder")
     spfy = login_user(username)
@@ -113,5 +145,5 @@ if __name__ == '__main__':
         print(track['id'], '-', track['name'], '-', track['artists'][0]['name'])
 
     # print(spfy.current_user())
-    #print(spfy.user_playlist('biasusan'))
-    wcsv_from_playlists(spfy, 'biasusan')
+    #print(spfy.user_playlist('maxmyllercarvalho'))
+    wcsv_from_playlists(spfy, 'maxmyllercarvalho')
