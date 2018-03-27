@@ -13,7 +13,7 @@
     all for privacy reasons.
 
     --- IMPORTANT ---
-    All spotyf objects in this module are dicts representing JSON objects defined
+    All spotify objects in this module are dicts representing JSON objects defined
     in the Spotify WEB API @link: https://developer.spotify.com/web-api/object-model/
 """
 
@@ -28,9 +28,10 @@ _redirect_uri = 'http://localhost/'
 
 _scope = ['user-library-read', 'playlist-modify-private']
 _fields = ['uri', 'speechiness', 'valence', 'mode', 'liveness', 'key', 'danceability', 'loudness', 'acousticness',
-          'instrumentalness', 'energy', 'tempo']
+           'instrumentalness', 'energy', 'tempo']
 
 _spfy = None
+
 
 def login_user(username, scope=None):
     """
@@ -55,7 +56,8 @@ def login_user(username, scope=None):
         print("Not able to get token for:", username)
 
 
-def get_favourite_music(spfy, limit=20):
+# TODO change description of this function
+def get_favorite_songs(spfy, limit=30):
     """
 
     Queries the spotify WEB API for the logged user's saved musics.
@@ -69,7 +71,29 @@ def get_favourite_music(spfy, limit=20):
 
     """
     results = spfy.current_user_saved_tracks(limit)
-    return results
+    show_tracks(results)
+    songs = []
+    for item in results['items']:
+        song = {field: item['track'][field] for field in ['name', 'id']}
+        songs.append(song)
+    return songs
+
+
+def get_user_playlists(spfy, userid, limit=30):
+    playlists = []
+    playlistpo = spfy.user_playlists(userid, limit)     # Returns a Spotify object (paging object) with playlists
+    for playlist in playlistpo['items']:
+        if playlist['owner']['id'] == userid:
+            result = spfy.user_playlist(userid, playlist['id'], fields="tracks,next")   # return a playlist object
+            trackspo = result['tracks']             # Array with information about the tracks in the playlist
+            show_tracks(trackspo)
+            tracks = []
+            for item in trackspo['items']:
+                track = {field: item['track'][field] for field in ['name', 'id']}
+                tracks.append(track)
+            playlists.append(tracks)
+
+    return playlists
 
 
 def show_tracks(tracks):
@@ -111,24 +135,23 @@ def wcsv_user_playlists(spfy, userid, limit=30, filename=None):
     if filename is None:
         filename = "csvfiles/" + str(userid) + "features.csv"
 
+    playlists = get_user_playlists(spfy, userid, limit)
+
     featarray = []
-    playlists = spfy.user_playlists(userid)  # Returns a Spotify object (paging object) with playlists
-    for playlist in playlists['items']:
-        if playlist['owner']['id'] == userid:
-            results = spfy.user_playlist(userid, playlist['id'], fields="tracks,next")  # return a playlist object
-
-            trackarray = results['tracks']      # Array with information about the tracks in the playlist
-            show_tracks(trackarray)
-            features = _get_features(spfy, trackarray, limit)
-
-            for ftrack in _filter_audio_features(features):
-                featarray.append(ftrack)
+    for playlist in playlists:
+        featarray.extend(get_features(spfy, playlist, limit))
 
     _wcsv(featarray, filename)
 
 
+# TODO change name of this function for a more appropriate one
 def wcsv_playlist(spfy, playlist, limit=30, filename="csvfiles/playlistfeatures.csv", quiet=True):
 
+    features = get_features(spfy, playlist, limit=limit, quiet=quiet)
+    _wcsv(features, filename)
+
+
+def get_features(spfy, tracks, limit, quiet=True):
     if limit > 50:
         if quiet:
             print("Limit value cannot be greater than 50")
@@ -136,23 +159,18 @@ def wcsv_playlist(spfy, playlist, limit=30, filename="csvfiles/playlistfeatures.
         else:
             raise ValueError("Limit value cannot be greater than 50")
 
-    features = _get_features(spfy, playlist, limit=30)
-    trackarray = [track for track in _filter_audio_features(features)]
-
-    _wcsv(trackarray, filename)
-
-
-def _get_features(spfy, tracks, limit):
-    trackids = [item['track']['id'] for item in tracks['items']]
+    trackids = [track['id'] for track in tracks]
     maxvalue = len(trackids) if len(trackids) < limit else limit + 1  # limit+1 necessary for slicing
-    return spfy.audio_features(trackids[:maxvalue])
+    feat = spfy.audio_features(trackids[:maxvalue])
+    ffeat = list(_filter_audio_features(feat))
+    return ffeat
 
 
 def _filter_audio_features(analysis):
-    # TODO write caracteristics of a song to a csv file (search useful characterists)
     for track in analysis:
         ftrack = {field: track[field] for field in _fields}
         yield ftrack
+
 
 def _wcsv(featarray, filename):
     csvfile = open(filename, 'w')
@@ -178,8 +196,9 @@ if __name__ == '__main__':
     print("This is a sample program that will search for your saved songs and write them to a file in csvfile/ folder")
     spfy = login_user(username)
 
-    result = spfy.current_user_saved_tracks(limit=40)
+    trackids = get_user_playlists(spfy, 'belzedu')
 
-    wcsv_playlist(spfy, result, limit=40)
+    fsongs = get_favorite_songs(spfy, limit=40)
+    wcsv_playlist(spfy, fsongs, limit=40)
 
     wcsv_user_playlists(spfy, 'biasusan', limit=40)
