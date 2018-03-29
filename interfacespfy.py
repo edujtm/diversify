@@ -74,7 +74,7 @@ def get_favorite_songs(spfy, limit=30, features=False):
         songs.append(song)
 
     if features:
-        return get_features(spfy, songs, limit=limit, quiet=False)
+        return get_features(spfy, songs, limit=limit)
     else:
         return songs
 
@@ -110,7 +110,7 @@ def get_user_playlists(spfy, userid, limit=30, features=False):
     if features:
         result = []
         for playlist in playlists:
-            result.extend(get_features(spfy, playlist, limit=limit, quiet=False))
+            result.extend(get_features(spfy, playlist, limit=limit))
         return result
     else:
         return playlists
@@ -124,7 +124,7 @@ def get_new_songs(spfy, seed_tracks, limit=30, country=None, features=False):
     songs = [{field: track[field] for field in ['id', 'name'] } for track in result['tracks']]
 
     if features:
-        return get_features(spfy, songs, limit=limit, quiet=False)
+        return get_features(spfy, songs, limit=limit)
     else:
         return songs
 
@@ -177,7 +177,7 @@ def user_playlists_to_csv(spfy, userid, limit=30, filename=None):
     _write_csv(featarray, filename)
 
 
-def playlist_to_csv(spfy, playlist, limit=30, filename="csvfiles/playlistfeatures.csv", quiet=True):
+def playlist_to_csv(spfy, playlist, limit=30, filename="csvfiles/playlistfeatures.csv"):
     """
     Writes a csv file with the features from a list with songs IDs in the
     path described by filename.
@@ -197,11 +197,11 @@ def playlist_to_csv(spfy, playlist, limit=30, filename="csvfiles/playlistfeature
     :param quiet: When set to false, will raise an exception when limit is too big
     :return: None
     """
-    features = get_features(spfy, playlist, limit=limit, quiet=quiet)
+    features = get_features(spfy, playlist, limit=limit)
     _write_csv(features, filename)
 
 
-def get_features(spfy, tracks, limit, quiet=True):
+def get_features(spfy, tracks, limit):
     """
     Queries the spotify WEB API for the features of a list of songs
     as described by the Audio Analysis object from the Spotify object
@@ -226,11 +226,7 @@ def get_features(spfy, tracks, limit, quiet=True):
     """
 
     if limit > 50:
-        if quiet:
-            print("Limit value cannot be greater than 50")
-            return False
-        else:
-            raise ValueError("Limit value cannot be greater than 50")
+        raise ValueError("Limit value cannot be greater than 50")
 
     trackids = [track['id'] for track in tracks]
     maxvalue = len(trackids) if len(trackids) < limit else limit + 1  # limit+1 necessary for slicing
@@ -282,9 +278,13 @@ def read_csv(filename):
         return featlist
 
 
-def create_playlist(spfy, userid, name):
+def tracks_to_playlist(spfy, userid, trackids=None, name=None):
     # TODO finish this function
-    spfy.user_playlist_create(userid, name, public=False)
+    if name is None:
+        name = 'Diversify playlist'
+    result = spfy.user_playlist_create(userid, name, public=False)
+    if trackids is not None:
+        spfy.user_playlist_add_tracks(userid, result['id'], trackids)
 
 if __name__ == '__main__':
     import pprint

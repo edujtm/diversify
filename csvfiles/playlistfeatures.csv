@@ -1,4 +1,5 @@
 id,speechiness,valence,mode,liveness,key,danceability,loudness,acousticness,instrumentalness,energy,tempo
+70SjyVMzhmMeJQD8hOmIBp,0.0476,0.607,0,0.123,5,0.732,-3.717,0.0459,3.11e-05,0.789,107.978
 1MglqgabKH4iSkw8xHJ0J9,0.103,0.568,0,0.878,11,0.386,-8.089,0.0285,0.897,0.917,127.315
 3stCwD5L683yq5AfdxxXHC,0.046,0.101,1,0.125,8,0.319,-6.356,0.0603,0.0016,0.784,151.748
 7gDwRzJhLs0fFHaGtMDJVM,0.0343,0.761,0,0.136,6,0.828,-6.142,0.247,1.86e-05,0.487,85.027
@@ -38,4 +39,3 @@ id,speechiness,valence,mode,liveness,key,danceability,loudness,acousticness,inst
 0hzBN7DGgtjBsTyZwTTKRS,0.0268,0.569,0,0.156,11,0.557,-5.743,0.019,0.187,0.586,104.636
 6DnfupwdspmFT2PYRjFH2F,0.0365,0.374,1,0.105,0,0.59,-6.034,0.00367,0.0185,0.808,125.669
 5S7kFUo496CoItemffWQb9,0.0423,0.452,0,0.218,4,0.556,-5.792,0.0054,0,0.702,132.33
-2ONpXycQzFmWiutUm7vpIC,0.0391,0.297,1,0.577,2,0.594,-6.007,0.00992,0.000447,0.814,152.936
