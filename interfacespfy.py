@@ -19,6 +19,7 @@
 
 import spotipy
 import spotipy.util as util
+import numpy as np
 import sys
 import csv
 
@@ -54,7 +55,7 @@ def login_user(username, scope=None):
         print("Not able to get token for:", username)
 
 
-def get_favorite_songs(spfy, limit=30):
+def get_favorite_songs(spfy, limit=30, features=False):
     """
     Queries the spotify WEB API for the logged user's saved musics.
     The token used to log in needs to have the 'user-library-read' permission.
@@ -71,10 +72,14 @@ def get_favorite_songs(spfy, limit=30):
     for item in results['items']:
         song = {field: item['track'][field] for field in ['name', 'id']}
         songs.append(song)
-    return songs
+
+    if features:
+        return get_features(spfy, songs, limit=limit, quiet=False)
+    else:
+        return songs
 
 
-def get_user_playlists(spfy, userid, limit=30):
+def get_user_playlists(spfy, userid, limit=30, features=False):
     """
     Queries the spotify WEB API for the musics in the public playlists
     from the user with the userid (Spotify ID).
@@ -102,14 +107,27 @@ def get_user_playlists(spfy, userid, limit=30):
                 tracks.append(track)
             playlists.append(tracks)
 
-    return playlists
+    if features:
+        result = []
+        for playlist in playlists:
+            result.extend(get_features(spfy, playlist, limit=limit, quiet=False))
+        return result
+    else:
+        return playlists
 
 
-# TODO verify why this function is going wrong
-def get_new_songs(spfy, seed_tracks, limit=30, country=None):
+# TODO write tracks to list of dicts
+def get_new_songs(spfy, seed_tracks, limit=30, country=None, features=False):
     trackids = [track['id'] for track in seed_tracks]
-    result = spfy.recommendations(seed_tracks=trackids, limit=limit, country=country)
-    print(result)
+    fids = np.random.choice(trackids, 5)
+    result = spfy.recommendations(seed_tracks=fids.tolist(), limit=limit, country=country)
+    songs = [{field: track[field] for field in ['id', 'name'] } for track in result['tracks']]
+
+    if features:
+        return get_features(spfy, songs, limit=limit, quiet=False)
+    else:
+        return songs
+
 
 def show_tracks(tracks):
     """
@@ -264,21 +282,23 @@ def read_csv(filename):
         return featlist
 
 
-def create_playlist(spfy, userid, name, public=True):
+def create_playlist(spfy, userid, name):
     # TODO finish this function
-    spfy.user_playlist_create(userid, name, public=public)
+    spfy.user_playlist_create(userid, name, public=False)
 
 if __name__ == '__main__':
+    import pprint
 
     if len(sys.argv) != 2:
         print("Usage: python3 {0} <username>".format(sys.argv[0]))
         sys.exit()
-    else:
-        username = sys.argv[1]
+
+    username = sys.argv[1]
 
     print("Logging:", username)
     print("This is a sample program that will search for your saved songs and write them to a file in csvfile/ folder")
     spfy = login_user(username)
 
     fsongs = get_favorite_songs(spfy, limit=40)
+    pprint.pprint(fsongs)
     playlist_to_csv(spfy, fsongs, limit=40)
