@@ -7,7 +7,7 @@ import pprint
 
 twousers = False
 
-def get_songs(userid):
+def get_songs(spfy, userid):
     try:
         return pd.read_csv('csvfiles/' + userid + 'features.csv')
     except FileNotFoundError:
@@ -16,7 +16,7 @@ def get_songs(userid):
 
 plistname = None
 
-if len(sys.argv) >= 1:
+if len(sys.argv) > 1:
     username1 = sys.argv[1]
     username2 = sys.argv[2]
     plistname = ' '.join(sys.argv[3:])
@@ -26,8 +26,8 @@ else:
 
 spfy = isp.login_user(username1)
 
-user1 = get_songs(username1)
-user2 = get_songs(username2)
+user1 = get_songs(spfy, username1)
+user2 = get_songs(spfy, username2)
 
 result = gen.start(spfy, user1, user2=user2)
 
