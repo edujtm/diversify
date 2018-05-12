@@ -2,30 +2,35 @@ import unittest
 import numpy as np
 import splearn as spl
 
-class TestSp(unittest.TestCase):
 
+class TestSp(unittest.TestCase):
 
     def test_constructor(self):
         randomlayers = np.random.randint(1, 6, 5)
+
+        def test_numpy(expected, test):
+            for exp, tst in zip(expected, test):
+                self.assertTrue(np.array_equal(exp, tst))
+
         # Teste construtor por valores das camadas
-        self.assertEqual([[0.0] * 5 for _ in range(9)], spl.MLP(9, 5).network)
+        test_numpy([np.zeros(5) for _ in range(9)], spl.MLP(9, 5)._network)
         # Teste construtor por iteravel
-        self.assertEqual([[0.0] * value for value in randomlayers], spl.MLP(randomlayers).network)
+        test_numpy([np.zeros(value) for value in randomlayers], spl.MLP(randomlayers)._network)
         # Teste construtor por inteiro
-        self.assertEqual([[0.0] * 9 for _ in range(9)], spl.MLP(9).network)
+        test_numpy([np.zeros(9) for _ in range(9)], spl.MLP(9)._network)
         # Teste construtor por pacote
-        self.assertEqual([[0.0] * value for value in randomlayers], spl.MLP(*randomlayers).network)
+        test_numpy([np.zeros(value) for value in randomlayers], spl.MLP(*randomlayers)._network)
 
         with self.assertRaises(TypeError):
             wronglayers = np.random.rand(3)
             print("Shape wronglayers: {0}".format(wronglayers.shape))
             # Teste construtor por float
-            neural = spl.MLP(3.7)
+            spl.MLP(3.7)
             # Teste construtor por string
-            neural = spl.MLP("marcelinho")
+            spl.MLP("marcelinho")
             # Teste construtor por tipo aleatorio
-            neural = spl.MLP(int)
+            spl.MLP(int)
             # Teste construtor por array de floats
-            neural = spl.MLP(wronglayers)
+            spl.MLP(wronglayers)
             # Teste construtor por sequencia de floats
-            neural = spl.MLP(*wronglayers)
+            spl.MLP(*wronglayers)
