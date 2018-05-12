@@ -1,38 +1,34 @@
 import unittest
 import numpy as np
 import splearn as spl
-
+import sklearn as skl
 
 class TestSp(unittest.TestCase):
 
-    def test_constructor(self):
-        randomlayers = np.random.randint(1, 6, 5)
+    def setUp(self):
+        self.data = np.array([[0, 0],
+                              [0, 1],
+                              [1, 0],
+                              [1, 1]])
+        self.target = np.array([[0, 0],
+                                [1, 0],
+                                [1, 0],
+                                [0, 1]])
 
-        def test_numpy(expected, test):
-            for exp, tst in zip(expected, test):
-                self.assertTrue(np.array_equal(exp, tst))
+    first = np.array([0, 0])
+    weight1 = np.array([[0.3, 0.8, 0.7],
+                        [0.5, 0.6, 0.2]])
+    weight2 = np.array([])
 
-        # Teste construtor por valores das camadas
-        test_numpy([np.zeros(5) for _ in range(9)], spl.MLP(9, 5)._network)
-        # Teste construtor por iteravel
-        test_numpy([np.zeros(value) for value in randomlayers], spl.MLP(randomlayers)._network)
-        # Teste construtor por inteiro
-        test_numpy([np.zeros(9) for _ in range(9)], spl.MLP(9)._network)
-        # Teste construtor por pacote
-        test_numpy([np.zeros(value) for value in randomlayers], spl.MLP(*randomlayers)._network)
+    def test_fitting(self):
 
+        ml = spl.MLP([2])
+        ml.fit(self.data, self.target)
+        for layer in ml._network:
+            print(layer)
 
-        redeneural = spl.MLP(2, 2)
-        with self.assertRaises(TypeError):
-            wronglayers = np.random.rand(3)
-            print("Shape wronglayers: {0}".format(wronglayers.shape))
-            # Teste construtor por float
-            spl.MLP(3.7)
-            # Teste construtor por string
-            spl.MLP("marcelinho")
-            # Teste construtor por tipo aleatorio
-            spl.MLP(int)
-            # Teste construtor por array de floats
-            spl.MLP(wronglayers)
-            # Teste construtor por sequencia de floats
-            spl.MLP(*wronglayers)
+    def test_predict(self):
+        pass
+
+    def test_back(self):
+        pass
