@@ -1,5 +1,9 @@
 import numpy as np
 
+class NotFittedError(Exception):
+    def __init__(self, message, errors):
+        super().__init__(message)
+        self.errors = errors
 
 class MLP:
     def __init__(self, *args):
@@ -11,6 +15,11 @@ class MLP:
         :param args: Any iterable, int or package of int (like a unpacked array Ex: *array)
         """
         self._network = None
+        self._weights = None
+        self._step = 0.5
+        self._sizes = None
+        self.fitted = False
+
         try:
             self.start_parameters(args[0])
         except TypeError:
@@ -25,9 +34,6 @@ class MLP:
                     self.start_parameters(args)
             except TypeError:
                 raise TypeError("Invalid argument for constructor. Expected: int, pair of int or iterable of ints.")
-        self._input = []
-        self._output = []
-        self._gradient = []
 
     def start_parameters(self, neuron_sizes):
         """
@@ -38,14 +44,27 @@ class MLP:
         :return:
         """
         self._network = [np.zeros(value) for value in neuron_sizes]
-        self.start_weights()
 
-    def start_weights(self):
+    def start_weights(self, inputsize, outputsize):
         """
         Inicializa a matriz de pesos para cada neuronio
         :return:
         """
-        pass
+        self._weights = []
+        domain = 4 * np.sqrt(6 / (inputsize + outputsize))
+
+        # Cria camada de entrada
+        shape = (inputsize+1, len(self._network[0]))
+        self._weights.append(np.random.uniform(-domain, domain, size=shape))
+
+        # Cria camadas ocultas
+        for i in range(len(self._network)-1):
+            shape = (len(self._network[i+1]), len(self._network[i]+1))
+            self._weights.append(np.random.uniform(-domain, domain, size=shape))
+        shape = (len(self._network[-1])+1, outputsize)
+
+        # Cria camada de saida
+        self._weights.append(np.random.uniform(-domain, domain, size=shape))
 
     def _test(self):
         print(self._network)
@@ -66,16 +85,21 @@ class MLP:
         - Repete isso ate chegar na ultima camada
         - Os valores da ultima camada de activated serao o resultado
         """
-        pass
+        if self.fitted:
+            pass
+        else:
+            raise NotFittedError("Neural network is unfitted. Try passing the data matrix to fit() method")
 
-    def fit(self, data):
-        bias = -1
+    def fit(self, data, target):
         """
         - para cada amostra em data:
         - Aplica predict
         - com o resultado de predict, calcula backpropagation
         """
-        pass
+        self.fitted = True
+        inputsize = data.shape[0]
+        outputsize = len(np.unique(target))
+        self.start_weights(inputsize, outputsize)
 
     # --- calculations ---
     def _backprop(self, expected):
@@ -84,6 +108,7 @@ class MLP:
         :param expected: Valor da resposta desejada da amostra calculada
         :return:
         """
+
         pass
 
     def activate(self, value):
@@ -95,11 +120,15 @@ class MLP:
         pass
 
     def neuron_sum(self, layer, neuron):
+        bias = -1
         pass
 
     def gradient(self, layer):
         pass
 
     # --- modifiers ---
-    def append(self):
+    def append(self, layer):
         pass
+
+    def set_step(self, new_step):
+        self._step = new_step

@@ -21,6 +21,8 @@ class TestSp(unittest.TestCase):
         # Teste construtor por pacote
         test_numpy([np.zeros(value) for value in randomlayers], spl.MLP(*randomlayers)._network)
 
+
+        redeneural = spl.MLP(2, 2)
         with self.assertRaises(TypeError):
             wronglayers = np.random.rand(3)
             print("Shape wronglayers: {0}".format(wronglayers.shape))
