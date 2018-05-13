@@ -86,7 +86,7 @@ class MLP:
         Essa funcao e o forward. Ela recebe uma vetor de amostras (uma musica no caso do projeto da unidade 1) e
         aplica na rede neural, mas nao faz o backpropagation, apenas retorna o vetor resultante.
 
-        :param data:
+        :param data: Uma matriz NumPy em que cada linha e uma amostra
         :return: Um valor indicando se a pessoa gosta ou nao da musica (caracteristicas da musica)
         """
         if not self.fitted:
@@ -101,13 +101,8 @@ class MLP:
             return [self._forward(data)]
 
     def fit(self, data, target):
-        """
-        - para cada amostra em data:
-        - Aplica predict
-        - com o resultado de predict, calcula backpropagation
-        """
         inputsize = data.shape[1]
-        outputsize = data.shape[1]
+        outputsize = target.shape[1]
         if not self.fitted:
             self._start_parameters(inputsize, outputsize)
             self.fitted = True
@@ -128,9 +123,7 @@ class MLP:
 
         np.copyto(self._network[0], temp)
 
-        print(range(len(self._network)))
         for i in range(len(self._network) - 1):
-            print(i)
             extended = self._network[i].copy()
             # Add bias to input
             bias = np.array([[-1]])
@@ -153,6 +146,9 @@ class MLP:
 
     def gradient(self, layer):
         pass
+
+    def derivative(self, layer, neuron):
+        return self._network[layer][neuron] * (1 - self._network[layer][neuron])
 
     # --- modifiers ---
 

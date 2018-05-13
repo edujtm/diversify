@@ -20,23 +20,23 @@ class TestSp(unittest.TestCase):
         randomlayers = np.random.randint(1, 6, 5)
 
         def test_numpy(expected, value):
-            expected.insert(0, np.zeros(2))
-            expected.append(np.zeros(2))
+            expected.insert(0, np.zeros(shape=(2, 1)))
+            expected.append(np.zeros(shape=(2, 1)))
             for exp, t in zip(expected, value):
                 self.assertTrue(np.array_equal(exp, t))
 
         # Teste construtor por valores das camadas
         neural1 = spl.MLP(9, 5).fit(self.data, self.target)
-        test_numpy([np.zeros(9) for _ in range(5)], neural1._network)
+        test_numpy([np.zeros(shape=(9, 1)) for _ in range(5)], neural1._network)
         # Teste construtor por iteravel
         neural2 = spl.MLP(randomlayers).fit(self.data, self.target)
-        test_numpy([np.zeros(value) for value in randomlayers], neural2._network)
+        test_numpy([np.zeros(shape=(value, 1)) for value in randomlayers], neural2._network)
         # Teste construtor por inteiro
         neural3 = spl.MLP(9).fit(self.data, self.target)
-        test_numpy([np.zeros(9) for _ in range(9)], neural3._network)
+        test_numpy([np.zeros(shape=(9, 1)) for _ in range(9)], neural3._network)
         # Teste construtor por pacote
         neural4 = spl.MLP(*randomlayers).fit(self.data, self.target)
-        test_numpy([np.zeros(value) for value in randomlayers], neural4._network)
+        test_numpy([np.zeros(shape=(value, 1)) for value in randomlayers], neural4._network)
 
         # Testando construtores errados
         with self.assertRaises(TypeError):
@@ -59,6 +59,14 @@ class TestSp(unittest.TestCase):
         for layer in ml._network:
             print(layer)
 
+        npnp = self.data
+        arrarr = npnp.tolist()
+        arrnp = [sample for sample in self.data]
+
+        spl.MLP(2, 1).fit(npnp, self.target)
+        #spl.MLP(2, 1).fit(arrarr, self.target)
+        #spl.MLP(2, 1).fit(arrnp, self.target)
+
     def test_foward(self):
         weight1 = np.array([[0.3, 0.8, 0.7],
                             [0.5, 0.6, 0.2]])
@@ -75,7 +83,30 @@ class TestSp(unittest.TestCase):
         tst.assert_almost_equal(neural._forward(testinput), testtarget, decimal=2)
 
     def test_predict(self):
-        pass
+        neural = spl.MLP(2, 1).fit(self.data, self.target)
+        result = neural.predict(np.array([[0, 1]]))
+        print(result)
 
     def test_back(self):
-        pass
+        weight1 = np.array([[0.3, 0.8, 0.7],
+                            [0.5, 0.6, 0.2]])
+        weight2 = np.array([[0.1, 0.4, 0.9],
+                            [0.5, 0.3, 0.6]])
+        first = np.array([[0.0, 0.0]])
+        target = np.array([[0.0, 0.0]])
+        testinput = np.array([0.0, 0.0])
+        expected = np.array([0.0, 0.0])
+
+        # Resultado dos calculos em sala de aula
+        nweights = [np.array([[0.3, 0.8, 0.71],
+                              [0.21, 0.5, 0.6]]),
+                    np.array([[0.08, 0.38, 0.93],
+                              [0.48, 0.28, 0.28]])]
+
+        neural = spl.MLP(2, 1).fit(first, target)
+        neural._weights[0] = weight1
+        neural._weights[1] = weight2
+        neural._forward(testinput)
+        neural._backprop(expected)
+        for old, new in zip(neural._weights, nweights):
+            tst.assert_almost_equal(old, new, decimal=2)
