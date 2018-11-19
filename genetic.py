@@ -1,36 +1,38 @@
 import random
 import pandas as pd
 import numpy as np
+import interfacespfy as isp
 import pprint
 
-tam_populacao = 20
-tam_genes = 20
-taxa_crossover = 0.7
+population_size = 20
+genes_size = 20
+crossover_rate = 0.7
 maxiter = 50
 
-_user1 = None       # Lista de musicas do primeiro usuario
-_user2 = None       # Lista de musicas do segundo usuario
-_nsongs = None      # Lista de musicas aleatorias
+_columns = ['speechiness', 'liveness', 'danceability', 'loudness', 'acousticness',
+           'instrumentalness', 'energy', 'tempo']
+
+_user1 = None       # Music list for first user
+_user2 = None       # Music list for second user
+_nsongs = None      # Random music list for mutations
 _twousers = False
 
-def gerar_individuo():
-    each = tam_genes // 4 if _twousers else tam_genes // 2
+
+def generate_individual():
+    each = genes_size // 4 if _twousers else genes_size // 2
     alreadyplaced = 2 * each if _twousers else each
 
-    music1 = np.random.choice(_user1, each)
+    music1 = _user1.sample(each)
     music2 = []
     if _twousers:
-        music2 = np.random.choice(_user2, each)
+        music2 = _user2.sample(each)
 
-    ransongs = np.random.choice(_nsongs, (tam_genes - alreadyplaced))
-    return music1.tolist() + music2.tolist() + ransongs.tolist()
+    ransongs = _nsongs.sample(genes_size - alreadyplaced)
+    return music1.append(music2).append(ransongs)
 
 
-def gerar_populacao():
-    populacao = []
-    for i in range(tam_populacao):
-        populacao.append(gerar_individuo()) #adiciona o individuo gerado na populacao no final da lista
-    return populacao
+def generate_population():
+    return [generate_individual() for i in range(population_size)]
 
 
 def fitness(playlist):
@@ -42,125 +44,150 @@ def fitness(playlist):
 
 
 def correlation(indv1, indv2):
-    frame1 = pd.DataFrame(indv1).select_dtypes(include=['float64', 'int64']) # Filtra o individuo para ficar apenas com valores int ou float
-    frame2 = pd.DataFrame(indv2).select_dtypes(include=['float64', 'int64'])
+    # Filtra o individuo para ficar apenas com valores int ou float
+    frame1 = indv1.select_dtypes(include=['float64', 'int64'])
+    frame2 = indv2.select_dtypes(include=['float64', 'int64'])
     result = frame1.corrwith(frame2.set_index(frame1.index))
     return result.sum()
 
 
-def selecionar_pais(populacao, k=3):
-    pais = []
-
-    for torneio in range(len(populacao)):
-
-        competidores = [random.choice(populacao) for i in range(k)]
-
-        maior_avaliacao = fitness(competidores[0])
-        vencedor = competidores[0]
-        for i in range(1, k):
-            avaliacao = fitness(competidores[i])
-            if avaliacao > maior_avaliacao:
-                maior_avaliacao = avaliacao
-                vencedor = competidores[i]
-
-        pais.append(vencedor)
-
-    return pais
+def select_parents(population, k=3):
+    parents = []
+    for tournament in range(len(population)):
+        competitors = [random.choice(population) for i in range(k)]
+        winner = max(competitors, key=fitness)
+        parents.append(winner)
+    return parents
 
 
-def gerar_filhos(pais):
-    nova_populacao = []
+def remove_duplicates(indv):
+    result = indv.drop_duplicates(keep='first')
+    subs = np.random.choice([_user1, _user2, _nsongs])
+    while len(result.index) != 20:
+        songs = subs.sample(population_size - len(result.index))
+        result = result.append(songs)
+        result.drop_duplicates(keep='first', inplace=True)
+    return result
 
-    for i in range(tam_populacao//2): #2 pais geram 2 filhos
 
-        pai1 = random.choice(pais)
-        pai2 = random.choice(pais)
+def generate_children(parents):
+    new_population = []
 
-        if random.random() < taxa_crossover:
-            corte = random.randint(1, len(pai1)-1)
-            filho1 = pai1[0:corte] + pai2[corte:]
-            filho2 = pai2[0:corte] + pai1[corte:]
-            nova_populacao.append(filho1)
-            nova_populacao.append(filho2)
+    for i in range(population_size // 2):  # 2 parents generate 2 children
+
+        parent1 = random.choice(parents)
+        parent2 = random.choice(parents)
+
+        if random.random() < crossover_rate:
+            cut = random.randint(1, len(parent1)-1)
+            child1 = parent1.sample(cut).append(parent2.sample(genes_size-cut))
+            child2 = parent2.sample(cut).append(parent1.sample(genes_size-cut))
+            child1 = remove_duplicates(child1)
+            child2 = remove_duplicates(child2)
+            if not child1.index.unique or not child2.index.unique:
+                new_population.extend([parent1, parent2])
+            else:
+                new_population.extend([child1, child2])
         else:
-            nova_populacao.append(pai1)
-            nova_populacao.append(pai2)
+            new_population.extend([parent1, parent2])
 
-    return nova_populacao
+    return new_population
 
 
-def mutacao(indv, prob):
+def mutation(indv, prob):
     if np.random.random() < prob:
-        result = indv[::2]
-        result.extend(np.random.choice(_nsongs, len(indv) // 2))
-        print("mutation -", len(result))
+        rest = _nsongs.sample(len(indv) // 2)
+        dropped = indv.drop(indv.index[::2])
+        result = dropped.append(rest)
+        print('mutation -', len(result))
+        result = remove_duplicates(result)
+        # if len(result) == 20:       # Gambiarra master
         return result
     return indv
 
 
 def run():
-    pop = gerar_populacao()
+    pop = generate_population()
 
-    for iter in range(maxiter):
-        pais = selecionar_pais(pop)
-        filhos = gerar_filhos(pais)
-        pop = [mutacao(filho, 0.01) for filho in filhos]
+    for iteration in range(maxiter):
+        print(iteration)
+        parents = select_parents(pop)
+        children = generate_children(parents)
+        pop = [mutation(child, 0.01) for child in children]
 
     return pop
 
 
-def start(user1, nsongs, user2=None):
+def start(spfy, user1, user2=None):
     global _user1, _nsongs, _twousers, _user2
-    _user1 = user1
-    _nsongs = nsongs
+    _user1 = user1.set_index('id')[:genes_size][_columns]
 
     if user2 is not None:
         _twousers = True
-        _user2 = user2
+        _user2 = user2.set_index('id')[:genes_size][_columns]
+
+    samples = _user1.sample(2).append(_user2.sample(2))
+    seeds = [{'id': value} for value in samples.index]
+    nsongs = isp.get_new_songs(spfy, seeds, limit=90)
+    _nsongs = pd.DataFrame(isp.get_features(spfy, nsongs, limit=50))
+    _nsongs.set_index('id', inplace=True)
 
     pop = run()
-    return pop[0]
+    return max(pop, key=fitness)
 
 
 if __name__ == '__main__':
-    import interfacespfy as isp
-    #populacao = gerar_populacao(tam_populacao)
-    #pais = selecionar_pais(populacao, tam_populacao, k)
-    #nova_populacao = gerar_filhos(pais, tam_populacao, taxa_crossover)
+    from argparse import ArgumentParser, RawTextHelpFormatter
+
+    description_hint = """
+        This is a sample program for the diversify playlist generator.
+        It will create a new playlist in your account based on some sample
+        data from the creators of this app.
+        
+        The app will redirect you to a page in your browser,
+        where you will be asked to login into your spotify account.
+        
+        After logging in into your account, you should be redirected to a page
+        with the URL pattern as follows:
+        
+        http://localhost/?code={code-pattern}
+        
+        where you should copy the code-pattern and paste into your terminal. 
+        These steps are only necessary once and are a current limitation of the
+        spotify WEB API.
+        
+        If you prefer, you can also log in through the spotify website into your 
+        browser and then run this program, which will not ask for your credentials
+        as you'll be already logged in.
+        
+        Spotify website: https://www.spotify.com/
+    """
+
+    parser = ArgumentParser(prog='python3 genetic.py',
+                            description=description_hint, formatter_class=RawTextHelpFormatter)
+
+    parser.add_argument('user', help='Your Spotify URI')
+    parser.add_argument('-p', '--playlist_name', nargs='+', default=['Genetic playlist'],
+                        help='The name for the playlist that will be created')
+
+    args = parser.parse_args()
+
+    pl_name = ' '.join(args.playlist_name)
+    user = args.user
 
     indv1 = pd.read_csv('csvfiles/playlistfeatures.csv')
     indv2 = pd.read_csv('csvfiles/maxmyllercarvalhofeatures.csv')
 
-    #pprint.pprint(indv1)
-    #pprint.pprint(indv2)
+    spfy = isp.login_user(user)
 
-    spfy = isp.login_user('belzedu')
-
-    _user1 = indv1.to_dict('records')[:tam_genes]
-    _user2 = indv2.to_dict('records')[:tam_genes]
+    _user1 = indv1[:genes_size][_columns + ['id']]
+    _user2 = indv2[:genes_size][_columns + ['id']]
     _twousers = True
 
-    #pprint.pprint(_user1)
-    #pprint.pprint(_user2)
+    print(_columns)
 
-    seeds = np.random.choice(_user1, 2).tolist() + np.random.choice(_user2, 2).tolist()
-    nsongs = isp.get_new_songs(spfy, seeds, limit=90)
-    _nsongs = isp.get_features(spfy, nsongs, limit=50)
-    #pprint.pprint(_nsongs)
-    result = start(_user1, user2=_user2, nsongs=_nsongs)
+    result = start(spfy, _user1, user2=_user2)
 
     pprint.pprint(result)
-    """
-    pop = gerar_populacao()
-    #pprint.pprint(pop[0])
-    pais = selecionar_pais(pop)
-    #pprint.pprint(pais[0])
-    filhos = gerar_filhos(pais)
-    #pprint.pprint(filhos[0])
-    result = [mutacao(filho, 0.01) for filho in filhos]
-    pprint.pprint(result[0])
-    """
-    '''
-    for i in range(tam_populacao):
-        print(populacao[i])
-    '''
+    resultids = result.index.tolist()
+    isp.tracks_to_playlist(spfy, 'belzedu', trackids=resultids, name=pl_name)

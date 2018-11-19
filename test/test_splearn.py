@@ -25,32 +25,32 @@ class TestSp(unittest.TestCase):
             for exp, t in zip(expected, value):
                 self.assertTrue(exp.shape, t.shape)
 
-        # Teste construtor por valores das camadas
+        # Test constructor with values for layers
         neural1 = spl.MLP(9, 5).fit(self.data, self.target)
         test_numpy([np.zeros(shape=(9, 1)) for _ in range(5)], neural1._network)
-        # Teste construtor por iteravel
+        # Test constructor for iterable
         neural2 = spl.MLP(randomlayers).fit(self.data, self.target)
         test_numpy([np.zeros(shape=(value, 1)) for value in randomlayers], neural2._network)
-        # Teste construtor por inteiro
+        # Test constructor with integer
         neural3 = spl.MLP(9).fit(self.data, self.target)
         test_numpy([np.zeros(shape=(9, 1)) for _ in range(9)], neural3._network)
-        # Teste construtor por pacote
+        # Test constructor with package
         neural4 = spl.MLP(*randomlayers).fit(self.data, self.target)
         test_numpy([np.zeros(shape=(value, 1)) for value in randomlayers], neural4._network)
 
-        # Testando construtores errados
+        # Testing wrong constructors
         with self.assertRaises(TypeError):
             wronglayers = np.random.rand(3)
             print("Shape wronglayers: {0}".format(wronglayers.shape))
-            # Teste construtor por float
+            # Test constructor with float
             spl.MLP(3.7)
-            # Teste construtor por string
+            # Test constructor with string
             spl.MLP("marcelinho")
-            # Teste construtor por tipo aleatorio
+            # Test constructor with random type
             spl.MLP(int)
-            # Teste construtor por array de floats
+            # Test constructor with array of floats
             spl.MLP(wronglayers)
-            # Teste construtor por sequencia de floats
+            # Test constructor with sequence of floats
             spl.MLP(*wronglayers)
 
     def test_fitting(self):
@@ -91,7 +91,7 @@ class TestSp(unittest.TestCase):
         testinput = np.array([0.0, 0.0])
         expected = np.array([0.0, 0.0])
 
-        # Resultado dos calculos em sala de aula
+        # Results from classroom assignment
         nweights = [np.array([[0.3, 0.8, 0.71],
                               [0.5, 0.6, 0.21]]),
                     np.array([[0.08, 0.38, 0.93],

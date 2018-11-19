@@ -22,9 +22,13 @@ import spotipy.util as util
 import numpy as np
 import sys
 import csv
+import os
+from dotenv import load_dotenv
 
-_client_id = '5d6d117598a94245a84a726981fa6e3b'
-_client_secret = '75df15e303d043a5ad6e65251de5a384'
+load_dotenv()
+
+_client_id = os.getenv("DIVERSIFY_CLIENT_ID")
+_client_secret = os.getenv("DIVERSIFY_CLIENT_SECRET")
 _redirect_uri = 'http://localhost/'
 
 _scope = ['user-library-read', 'playlist-modify-private']
@@ -221,7 +225,6 @@ def get_features(spfy, tracks, limit):
     :param spfy: Spotipy session object that is returned when logging user
     :param tracks: list with songs (dicts with id and name keys)
     :param limit: The number of songs to be gathered
-    :param quiet: When set to false, will raise an exception when limit is too big
     :return: A list with dicts representing audio features
     """
 
@@ -285,6 +288,7 @@ def tracks_to_playlist(spfy, userid, trackids=None, name=None):
     result = spfy.user_playlist_create(userid, name, public=False)
     if trackids is not None:
         spfy.user_playlist_add_tracks(userid, result['id'], trackids)
+
 
 if __name__ == '__main__':
     import pprint

@@ -1,11 +1,13 @@
 
 import sys
 import interfacespfy as isp
-import genetic2 as gen
+import genetic as gen
 import pandas as pd
 import pprint
+import splearn as sp
 
 twousers = False
+
 
 def get_songs(spfy, userid):
     try:
@@ -14,6 +16,8 @@ def get_songs(spfy, userid):
         result = isp.get_user_playlists(spfy, userid, limit=40, features=True)
         return pd.DataFrame(result)
 
+
+# TODO use argparse to parse CLI
 plistname = None
 
 if len(sys.argv) > 1:
@@ -26,6 +30,8 @@ else:
 
 spfy = isp.login_user(username1)
 
+sp.load_mlearn(spfy, users=[username1, username2])
+"""
 user1 = get_songs(spfy, username1)
 user2 = get_songs(spfy, username2)
 
@@ -37,3 +43,4 @@ if plistname is None:
 pprint.pprint(result)
 resultids = result.index.tolist()
 isp.tracks_to_playlist(spfy, 'belzedu', trackids=resultids, name=plistname)
+"""
