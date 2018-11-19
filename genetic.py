@@ -23,12 +23,14 @@ def generate_individual():
     alreadyplaced = 2 * each if _twousers else each
 
     music1 = _user1.sample(each)
-    music2 = []
+    ransongs = _nsongs.sample(genes_size - alreadyplaced)
+
+    result = music1.append(ransongs)
     if _twousers:
         music2 = _user2.sample(each)
+        result.append(music2)
 
-    ransongs = _nsongs.sample(genes_size - alreadyplaced)
-    return music1.append(music2).append(ransongs)
+    return result
 
 
 def generate_population():
@@ -62,7 +64,10 @@ def select_parents(population, k=3):
 
 def remove_duplicates(indv):
     result = indv.drop_duplicates(keep='first')
-    subs = np.random.choice([_user1, _user2, _nsongs])
+    all_data = [_user1, _nsongs]
+    if _user2 is not None:
+        all_data += [_user2]
+    subs = np.random.choice(all_data)
     while len(result.index) != 20:
         songs = subs.sample(population_size - len(result.index))
         result = result.append(songs)
@@ -125,8 +130,10 @@ def start(spfy, user1, user2=None):
     if user2 is not None:
         _twousers = True
         _user2 = user2.set_index('id')[:genes_size][_columns]
+        samples = _user1.sample(2).append(_user2.sample(2))
+    else:
+        samples = _user1.sample(4)
 
-    samples = _user1.sample(2).append(_user2.sample(2))
     seeds = [{'id': value} for value in samples.index]
     nsongs = isp.get_new_songs(spfy, seeds, limit=90)
     _nsongs = pd.DataFrame(isp.get_features(spfy, nsongs, limit=50))
