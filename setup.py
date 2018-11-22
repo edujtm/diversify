@@ -10,6 +10,6 @@ setup(name='diversify',
       install_requires=[
           'numpy', 'pandas',
           'pprint', 'spotipy',
-          'python-dotenv'
+          'python-dotenv', 'argparse'
       ],
       zip_safe=False)

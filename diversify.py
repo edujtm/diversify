@@ -1,4 +1,7 @@
 
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 import sys
 import interfacespfy as isp
 import genetic as gen
