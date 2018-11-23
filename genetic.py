@@ -1,3 +1,6 @@
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 import random
 import pandas as pd
 import numpy as np
@@ -23,12 +26,12 @@ def generate_individual():
     alreadyplaced = 2 * each if _twousers else each
 
     music1 = _user1.sample(each)
-    ransongs = _nsongs.sample(genes_size - alreadyplaced)
 
+    ransongs = _nsongs.sample(genes_size - alreadyplaced)
     result = music1.append(ransongs)
     if _twousers:
         music2 = _user2.sample(each)
-        result.append(music2)
+        result = result.append(music2)
 
     return result
 
@@ -65,7 +68,7 @@ def select_parents(population, k=3):
 def remove_duplicates(indv):
     result = indv.drop_duplicates(keep='first')
     all_data = [_user1, _nsongs]
-    if _user2 is not None:
+    if _twousers:
         all_data += [_user2]
     subs = np.random.choice(all_data)
     while len(result.index) != 20:
@@ -197,4 +200,4 @@ if __name__ == '__main__':
 
     pprint.pprint(result)
     resultids = result.index.tolist()
-    isp.tracks_to_playlist(spfy, 'belzedu', trackids=resultids, name=pl_name)
+    isp.tracks_to_playlist(spfy, user, trackids=resultids, name=pl_name)

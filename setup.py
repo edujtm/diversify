@@ -9,7 +9,7 @@ setup(name='diversify',
       license='MIT',
       install_requires=[
           'numpy', 'pandas',
-          'pprint', 'spotipy',
-          'python-dotenv', 'argparse'
+          'spotipy', 'argparse',
+          'python-dotenv', 
       ],
       zip_safe=False)
