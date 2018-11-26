@@ -34,6 +34,8 @@ _scope = ['user-library-read', 'playlist-modify-private']
 _fields = ['id', 'speechiness', 'valence', 'mode', 'liveness', 'key', 'danceability', 'loudness', 'acousticness',
            'instrumentalness', 'energy', 'tempo']
 
+_limit = 50
+
 
 def login_user(username, scope=None):
     """
@@ -58,12 +60,14 @@ def login_user(username, scope=None):
         print("Not able to get token for:", username)
 
 
-def get_favorite_songs(spfy, limit=30, features=False):
+def get_favorite_songs(spfy, features=False):
     """
     Queries the spotify WEB API for the logged user's saved musics.
     The token used to log in needs to have the 'user-library-read' permission.
     If that's not the case add it in the interfacespfy.scope array and refresh
     the token.
+
+    Quantity of requests per call = ceil( n° of saved songs / limit )
 
     :param spfy: spfy object received when logging user
     :param limit: maximum of musics that will be returned from query
@@ -71,28 +75,35 @@ def get_favorite_songs(spfy, limit=30, features=False):
     :param genres: If it's true, makes another request to the API to get music genre info
     :return: list of dictionaries with name and id keys
     """
-    results = spfy.current_user_saved_tracks(limit)
-    show_tracks(results)
-    songs = []
+
+    local_limit = 50
+
     fields = ['name', 'id', 'popularity', 'duration_ms']
+    results = spfy.current_user_saved_tracks(local_limit)
 
-    for item in results['items']:
-        song = {field: item['track'][field] for field in fields}
+    def _get_song_info(json_response):
+        result = []
+        for item in json_response['items']:
+            song = {field: item['track'][field] for field in fields}
 
-        song['album'] = item['track']['album']['name']
-        song['album_id'] = item['track']['album']['id']
-        song['artist'] = item['track']['artists'][0]['name']
-        song['artist_id'] = item['track']['artists'][0]['id']
+            song['album'] = item['track']['album']['name']
+            song['album_id'] = item['track']['album']['id']
+            song['artist'] = item['track']['artists'][0]['name']
+            song['artist_id'] = item['track']['artists'][0]['id']
 
-        songs.append(song)
+            result.append(song)
+        return result
+
+    songs = _for_all(results, _get_song_info, spfy)
 
     if features:
-        return get_features(spfy, songs, limit=limit)
+        return get_features(spfy, songs)
     else:
         return songs
 
 
-def get_user_playlists(spfy, userid, limit=30, features=False):
+# TODO add flat feature
+def get_user_playlists(spfy, userid, features=False, flat=False):
     """
     Queries the spotify WEB API for the musics in the public playlists
     from the user with the userid (Spotify ID).
@@ -100,44 +111,57 @@ def get_user_playlists(spfy, userid, limit=30, features=False):
     The limit is the number of songs per playlists that will be returned.
 
     The return is a list of playlists with each being represented by a
-    list of songs (dict with name and id keys).
+    tuple of (name, list of songs (each being a dict with song info)).
 
     :param spfy: Spotipy session object that is returned when logging user
     :param userid:  The Spotify ID of the playlits' owner
-    :param limit: Number of songs per playlist
+    :param features: If true, gets features instead of song data. default: False
     :return: A list of lists representing songs in each public playlists.
     """
-    playlists = []
-    playlistpo = spfy.user_playlists(userid, limit)     # Returns a Spotify object (paging object) with playlists
-    for playlist in playlistpo['items']:
-        if playlist['owner']['id'] == userid:
-            result = spfy.user_playlist(userid, playlist['id'], fields="tracks,next")   # return a playlist object
-            trackspo = result['tracks']             # Array with information about the tracks in the playlist
-            #show_tracks(trackspo)
-            tracks = []
-            for item in trackspo['items']:
-                track = {field: item['track'][field] for field in ['name', 'id']}
-                tracks.append(track)
-            playlists.append(tracks)
+
+    local_limit = 50
+
+    playlist_query = spfy.user_playlists(userid, local_limit)     # Returns a Spotify object (paging object) with playlists
+
+    # TODO try to change this method to _get_song_info
+    def _get_tracks_from_playlist(tracks_paging):
+        tracks = []
+        for item in tracks_paging['items']:
+            track = {field: item['track'][field] for field in ['name', 'id', 'popularity', 'duration_ms']}
+            tracks.append(track)
+        return tracks
+
+    def _get_all_playlists(playlist_paging):
+        result = []
+        for playlist in playlist_paging['items']:
+            if playlist['owner']['id'] == userid:
+                response = spfy.user_playlist(userid, playlist['id'], fields="tracks,next")   # return a playlist object
+                trackspo = response['tracks']             # Array with information about the tracks in the playlist
+                tracks = _for_all(trackspo, _get_tracks_from_playlist, spfy)
+                result.append((playlist['name'], tracks, ))
+        return result
+
+    playlists = _for_all(playlist_query, _get_all_playlists, spfy)
 
     if features:
         result = []
         for playlist in playlists:
-            result.extend(get_features(spfy, playlist, limit=limit))
+            result.extend(get_features(spfy, playlist))
         return result
     else:
         return playlists
 
 
-# TODO write tracks to list of dicts
-def get_new_songs(spfy, seed_tracks, limit=30, country=None, features=False):
+def get_new_songs(spfy, seed_tracks, country=None, features=False):
+
+    local_limit = 100
     trackids = [track['id'] for track in seed_tracks]
     fids = np.random.choice(trackids, 5)
-    result = spfy.recommendations(seed_tracks=fids.tolist(), limit=limit, country=country)
-    songs = [{field: track[field] for field in ['id', 'name']} for track in result['tracks']]
+    result = spfy.recommendations(seed_tracks=fids.tolist(), limit=local_limit, country=country)
+    songs = [{field: track[field] for field in ['id', 'name', 'duration_ms', 'popularity']} for track in result['tracks']]
 
     if features:
-        return get_features(spfy, songs, limit=limit)
+        return get_features(spfy, songs)
     else:
         return songs
 
@@ -156,7 +180,7 @@ def show_tracks(tracks):
         print("{0} {1:32.32s} {2:32s}".format(idx, track['artists'][0]['name'], track['name']))
 
 
-def user_playlists_to_csv(spfy, userid, limit=30, filename=None):
+def user_playlists_to_csv(spfy, userid, filename=None):
     """
 
     Writes a csv file in csvfile/ folder with information about music preferences
@@ -168,12 +192,8 @@ def user_playlists_to_csv(spfy, userid, limit=30, filename=None):
     If it's not it'll be written as csvfiles/<userid>features.csv. If the file already
     exists, it's content will be overwritten.
 
-    The limit is the number of songs per playlist that will be gathered. If the playlist
-    have less musics than the limit, it'll gather the entire playlist.
-
     :param spfy: Spotipy session object that is returned when logging user
     :param userid: The user Spotify ID
-    :param limit: Maximum number of musics per playlist (maximum of 50)
     :param filename: The name of the csv file to be written in
     :return: None
     """
@@ -181,36 +201,28 @@ def user_playlists_to_csv(spfy, userid, limit=30, filename=None):
     if filename is None:
         filename = "csvfiles/" + str(userid) + "features.csv"
 
-    playlists = get_user_playlists(spfy, userid, limit)
+    playlists = get_user_playlists(spfy, userid)
 
     featarray = []
     for playlist in playlists:
-        featarray.extend(get_features(spfy, playlist, limit))
+        featarray.extend(get_features(spfy, playlist))
 
     _write_csv(featarray, filename)
 
 
-def playlist_to_csv(spfy, playlist, limit=30, filename="csvfiles/playlistfeatures.csv"):
+def playlist_to_csv(spfy, playlist, filename=None):
     """
     Writes a csv file with the features from a list with songs IDs in the
     path described by filename.
 
-    the limit is the number of songs to be written in the csv file. It is
-    currently necessary because the query to the spotify WEB API only has
-    a maximum of 50 songs per call.
-
-    If the limit is greater than 50 and quiet is set to True, the function
-    will print a warning message and return False without writing anything.
-    If it's set to false, it'll raise an Exception.
-
     :param spfy: Spotipy session object that is returned when logging user
     :param playlist: list with songs (dicts with id and name keys)
-    :param limit: The number of songs to be written
     :param filename: path where the features will be written
-    :param quiet: When set to false, will raise an exception when limit is too big
     :return: None
     """
-    features = get_features(spfy, playlist, limit=limit)
+    if not filename:
+        filename = 'csvfiles/playlistfeatures.csv'
+    features = get_features(spfy, playlist)
     _write_csv(features, filename)
 
 
@@ -235,7 +247,18 @@ def get_genres(spfy, artists_ids):
                 yield 'Not available'
 
 
-def get_features(spfy, tracks, limit):
+def _for_all(json_response, func, spfy):
+    result = []
+    while True:
+        part = func(json_response)
+        result.extend(part)
+        if not json_response['next']:
+            break
+        json_response = spfy.next(json_response)
+    return result
+
+
+def get_features(spfy, tracks):
     """
     Queries the spotify WEB API for the features of a list of songs
     as described by the Audio Analysis object from the Spotify object
@@ -244,28 +267,24 @@ def get_features(spfy, tracks, limit):
     The returned object is filtered with the fields described in the
     _fields object of the module.
 
-    The limit is the number of songs that will be returned. It can be
-    set to the number of songs in the tracks list, but it canno't be
-    greater than 50.
-
-    If the limit is greater than 50 and quiet is set to True, the function
-    will print a warning message and return False without writing anything.
-    If it's set to false, it'll raise an Exception.
+    Quantity of requests per call = ceil( n° of saved songs / 100 )
 
     :param spfy: Spotipy session object that is returned when logging user
     :param tracks: list with songs (dicts with id and name keys)
-    :param limit: The number of songs to be gathered
     :return: A list with dicts representing audio features
     """
 
-    if limit > 50:
-        raise ValueError("Limit value cannot be greater than 50")
-
+    local_limit = 100
     trackids = [track['id'] for track in tracks]
-    maxvalue = len(trackids) if len(trackids) < limit else limit + 1  # limit+1 necessary for slicing
-    feat = spfy.audio_features(trackids[:maxvalue])
-    ffeat = list(_filter_audio_features(feat))
-    return ffeat
+    all_feat = []
+
+    while trackids:
+        query, trackids = trackids[:local_limit], trackids[local_limit:]
+        feat = spfy.audio_features(query)
+        ffeat = list(_filter_audio_features(feat))
+        all_feat.extend(ffeat)
+
+    return all_feat
 
 
 def _filter_audio_features(analysis):
@@ -312,12 +331,15 @@ def read_csv(filename):
 
 
 def tracks_to_playlist(spfy, userid, trackids, name=None):
-    # TODO finish this function
     if name is None:
         name = 'Diversify playlist'
     result = spfy.user_playlist_create(userid, name, public=False)
-    # TODO check if this change breaks diversify or genetic
     spfy.user_playlist_add_tracks(userid, result['id'], trackids)
+
+
+class HighLimitException(Exception):
+    def __init__(self, message):
+        super(HighLimitException, self).__init__(message)
 
 
 if __name__ == '__main__':
@@ -337,17 +359,20 @@ if __name__ == '__main__':
     parser.add_argument('-f', dest='filename', help='The filename where the info is going to be saved')
 
     args = parser.parse_args()
+
     username = args.user
-    filename = args.filename
+    fname = 'playlistfeatures'
+    if args.filename:
+        fname = args.filename
 
     print("Logging:", username)
     print("This is a sample program that will search for your saved songs and write them to a file in csvfile/ folder")
-    spfy = login_user(username)
+    sp = login_user(username)
 
-    fsongs = get_favorite_songs(spfy, limit=20)
+    fsongs = get_favorite_songs(sp, features=True)
 
     dfsongs = pd.DataFrame(fsongs)
     pprint.pprint(dfsongs)
 
-    path = 'csvfiles/' + filename + '.csv'
-    playlist_to_csv(spfy, fsongs, limit=40, filename=path)
+    path = 'csvfiles/' + fname + '.csv'
+    playlist_to_csv(sp, fsongs, filename=path)
