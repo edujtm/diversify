@@ -145,7 +145,7 @@ def get_user_playlists(spfy, userid, features=False, flat=False):
 
     if features:
         result = []
-        for playlist in playlists:
+        for name, playlist in playlists:
             result.extend(get_features(spfy, playlist))
         return result
     else:
