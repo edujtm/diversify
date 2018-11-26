@@ -16,7 +16,7 @@ def get_songs(spfy, userid):
     try:
         return pd.read_csv('csvfiles/' + userid + 'features.csv')
     except FileNotFoundError:
-        result = isp.get_user_playlists(spfy, userid, limit=40, features=True)
+        result = isp.get_user_playlists(spfy, userid, features=True)
         return pd.DataFrame(result)
 
 
