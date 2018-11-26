@@ -20,9 +20,8 @@
 import spotipy
 import spotipy.util as util
 import numpy as np
-import sys
-import csv
-import os
+import sys, csv, os
+import argparse
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -68,13 +67,23 @@ def get_favorite_songs(spfy, limit=30, features=False):
 
     :param spfy: spfy object received when logging user
     :param limit: maximum of musics that will be returned from query
+    :param features: False -> returns name and id, True -> returns id and features of the song
+    :param genres: If it's true, makes another request to the API to get music genre info
     :return: list of dictionaries with name and id keys
     """
     results = spfy.current_user_saved_tracks(limit)
     show_tracks(results)
     songs = []
+    fields = ['name', 'id', 'popularity', 'duration_ms']
+
     for item in results['items']:
-        song = {field: item['track'][field] for field in ['name', 'id']}
+        song = {field: item['track'][field] for field in fields}
+
+        song['album'] = item['track']['album']['name']
+        song['album_id'] = item['track']['album']['id']
+        song['artist'] = item['track']['artists'][0]['name']
+        song['artist_id'] = item['track']['artists'][0]['id']
+
         songs.append(song)
 
     if features:
@@ -125,7 +134,7 @@ def get_new_songs(spfy, seed_tracks, limit=30, country=None, features=False):
     trackids = [track['id'] for track in seed_tracks]
     fids = np.random.choice(trackids, 5)
     result = spfy.recommendations(seed_tracks=fids.tolist(), limit=limit, country=country)
-    songs = [{field: track[field] for field in ['id', 'name'] } for track in result['tracks']]
+    songs = [{field: track[field] for field in ['id', 'name']} for track in result['tracks']]
 
     if features:
         return get_features(spfy, songs, limit=limit)
@@ -205,6 +214,27 @@ def playlist_to_csv(spfy, playlist, limit=30, filename="csvfiles/playlistfeature
     _write_csv(features, filename)
 
 
+def get_genres(spfy, artists_ids):
+    """
+            The spofify API currently does not have genres available.
+        Left this code here to adapt it for requesting more songs in
+        get_favorite_songs() and other methods.
+
+    :param spfy:
+    :param artists_ids:
+    :return:
+    """
+    copies = [artist_id for artist_id in artists_ids]
+    while copies:
+        query, copies = copies[:50], copies[50:]
+        response = spfy.albums(query)
+        for album in response['albums']:
+            if album['genres']:
+                yield album['genres'][0]
+            else:
+                yield 'Not available'
+
+
 def get_features(spfy, tracks, limit):
     """
     Queries the spotify WEB API for the features of a list of songs
@@ -281,28 +311,43 @@ def read_csv(filename):
         return featlist
 
 
-def tracks_to_playlist(spfy, userid, trackids=None, name=None):
+def tracks_to_playlist(spfy, userid, trackids, name=None):
     # TODO finish this function
     if name is None:
         name = 'Diversify playlist'
     result = spfy.user_playlist_create(userid, name, public=False)
-    if trackids is not None:
-        spfy.user_playlist_add_tracks(userid, result['id'], trackids)
+    # TODO check if this change breaks diversify or genetic
+    spfy.user_playlist_add_tracks(userid, result['id'], trackids)
 
 
 if __name__ == '__main__':
     import pprint
+    import pandas as pd
 
-    if len(sys.argv) != 2:
-        print("Usage: python3 {0} <username>".format(sys.argv[0]))
-        sys.exit()
+    hint = """
+        This is a small sample code to test if your installation is sucessful.
+        
+        It'll access your spotify saved songs and download the songs features 
+        from the API, saving them into a csv file in the csvfiles/ folder.
+    """
 
-    username = sys.argv[1]
+    parser = argparse.ArgumentParser(description=hint, formatter_class=argparse.RawTextHelpFormatter)
+
+    parser.add_argument('user', help='You spotifity URI')
+    parser.add_argument('-f', dest='filename', help='The filename where the info is going to be saved')
+
+    args = parser.parse_args()
+    username = args.user
+    filename = args.filename
 
     print("Logging:", username)
     print("This is a sample program that will search for your saved songs and write them to a file in csvfile/ folder")
     spfy = login_user(username)
 
-    fsongs = get_favorite_songs(spfy, limit=40)
-    pprint.pprint(fsongs)
-    playlist_to_csv(spfy, fsongs, limit=40)
+    fsongs = get_favorite_songs(spfy, limit=20)
+
+    dfsongs = pd.DataFrame(fsongs)
+    pprint.pprint(dfsongs)
+
+    path = 'csvfiles/' + filename + '.csv'
+    playlist_to_csv(spfy, fsongs, limit=40, filename=path)
