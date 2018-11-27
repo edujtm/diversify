@@ -26,8 +26,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-_client_id = os.getenv("DIVERSIFY_CLIENT_ID")
-_client_secret = os.getenv("DIVERSIFY_CLIENT_SECRET")
+_client_id = '5d6d117598a94245a84a726981fa6e3b'
+_client_secret = 'af28dec05f2743d0acb671fd458b783f'
 _redirect_uri = 'http://localhost/'
 
 _scope = ['user-library-read', 'playlist-modify-private']
