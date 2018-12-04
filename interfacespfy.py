@@ -78,21 +78,7 @@ def get_favorite_songs(spfy, features=False):
 
     local_limit = 50
 
-    fields = ['name', 'id', 'popularity', 'duration_ms']
     results = spfy.current_user_saved_tracks(local_limit)
-
-    def _get_song_info(json_response):
-        result = []
-        for item in json_response['items']:
-            song = {field: item['track'][field] for field in fields}
-
-            song['album'] = item['track']['album']['name']
-            song['album_id'] = item['track']['album']['id']
-            song['artist'] = item['track']['artists'][0]['name']
-            song['artist_id'] = item['track']['artists'][0]['id']
-
-            result.append(song)
-        return result
 
     songs = _for_all(results, _get_song_info, spfy)
 
@@ -123,21 +109,13 @@ def get_user_playlists(spfy, userid, features=False, flat=False):
 
     playlist_query = spfy.user_playlists(userid, local_limit)     # Returns a Spotify object (paging object) with playlists
 
-    # TODO try to change this method to _get_song_info
-    def _get_tracks_from_playlist(tracks_paging):
-        tracks = []
-        for item in tracks_paging['items']:
-            track = {field: item['track'][field] for field in ['name', 'id', 'popularity', 'duration_ms']}
-            tracks.append(track)
-        return tracks
-
     def _get_all_playlists(playlist_paging):
         result = []
         for playlist in playlist_paging['items']:
             if playlist['owner']['id'] == userid:
                 response = spfy.user_playlist(userid, playlist['id'], fields="tracks,next")   # return a playlist object
                 trackspo = response['tracks']             # Array with information about the tracks in the playlist
-                tracks = _for_all(trackspo, _get_tracks_from_playlist, spfy)
+                tracks = _for_all(trackspo, _get_song_info, spfy)
                 result.append((playlist['name'], tracks, ))
         return result
 
@@ -247,17 +225,6 @@ def get_genres(spfy, artists_ids):
                 yield 'Not available'
 
 
-def _for_all(json_response, func, spfy):
-    result = []
-    while True:
-        part = func(json_response)
-        result.extend(part)
-        if not json_response['next']:
-            break
-        json_response = spfy.next(json_response)
-    return result
-
-
 def get_features(spfy, tracks):
     """
     Queries the spotify WEB API for the features of a list of songs
@@ -335,6 +302,35 @@ def tracks_to_playlist(spfy, userid, trackids, name=None):
         name = 'Diversify playlist'
     result = spfy.user_playlist_create(userid, name, public=False)
     spfy.user_playlist_add_tracks(userid, result['id'], trackids)
+
+
+#  --------  Unwrappers  --------
+
+def _for_all(json_response, func, spfy):
+    result = []
+    while True:
+        part = func(json_response)
+        result.extend(part)
+        if not json_response['next']:
+            break
+        json_response = spfy.next(json_response)
+    return result
+
+
+def _get_song_info(json_response):
+    fields = ['name', 'id', 'popularity', 'duration_ms']
+
+    result = []
+    for item in json_response['items']:
+        song = {field: item['track'][field] for field in fields}
+
+        song['album'] = item['track']['album']['name']
+        song['album_id'] = item['track']['album']['id']
+        song['artist'] = item['track']['artists'][0]['name']
+        song['artist_id'] = item['track']['artists'][0]['id']
+
+        result.append(song)
+    return result
 
 
 class HighLimitException(Exception):
