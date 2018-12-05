@@ -1,11 +1,12 @@
 import tensorflow as tf
 import numpy as np
+import scipy.stats as scp
 
 COLUMN_NAMES = ['speechiness', 'valence', 'liveness', 'danceability', 'loudness', 'acousticness',
                 'instrumentalness', 'energy', 'tempo']
 
-
 FEATURE_COLUMNS = {column: tf.feature_column.numeric_column(key=column) for column in COLUMN_NAMES}
+
 
 def get_columns(features):
     return {feature: tf.feature_column.numeric_column(key=feature) for feature in features}
@@ -39,7 +40,7 @@ def get_centers(data, labels=None, num_iterations=10, features=None):
     else:
         for feat in features:
             if feat not in COLUMN_NAMES:
-                raise ValueError("All elements in the features list must be in the set: {}".format(COLUMN_NAMES))
+                raise FeaturesError("All elements in the features list must be in the set: {}".format(COLUMN_NAMES))
 
     feat_columns = get_columns(features)
 
@@ -58,8 +59,38 @@ def get_centers(data, labels=None, num_iterations=10, features=None):
     return kmeans.cluster_centers()
 
 
-def exponential_distance(song, user_center):
-    return np.exp(np.power(song - user_center, 2)) / np.sqrt(2 * np.pi)
+def exponential_distance(song, user_center, features=None):
+    if features is None:
+        features = COLUMN_NAMES
+    try:
+        song_feat = song[features].values
+    except KeyError:
+        raise FeaturesError("All elements in features list must be in the set: {}".format(COLUMN_NAMES))
+
+    n_dim = len(features)
+    song_feat = song_feat.reshape((-1, n_dim)).astype(np.float64)
+    assert song_feat.shape == user_center.shape, "song feature shape is different from the user preference vector's " \
+                                                 "shape: {} != {}".format(song_feat.shape, user_center.shape)
+
+    print(song_feat - user_center)
+    norm = np.linalg.norm(song_feat - user_center) ** 2
+    print(f"norm is {norm}")
+
+    identity = np.eye(n_dim, dtype=np.float64)
+    mean = user_center.flatten()
+    return scp.multivariate_normal.pdf(song_feat, mean, identity)
+
+
+def playlist_score(playlist, center):
+    scores = np.array([])
+    for song in playlist:
+        scores.append(exponential_distance(song, center)) 
+    return np.mean(scores)
+
+
+class FeaturesError(Exception):
+    def __init__(self, message):
+        super(FeaturesError, self).__init__(self, message)
 
 
 if __name__ == '__main__':
@@ -71,20 +102,34 @@ if __name__ == '__main__':
 
     import interfacespfy as isp
 
-    spfy = isp.login_user('belzedu')
+    def maybe_download(username):
+        filepath = '../csvfiles/' + username + 'saved.csv'
 
-    features = isp.get_favorite_songs(spfy, features=True)
-    data = isp.get_favorite_songs(spfy)
+        if os.path.isfile(filepath):
+            all_data = pd.read_csv(filepath)
+        else:
+            spfy = isp.login_user('belzedu')
 
-    song_feat = pd.DataFrame(features)
-    song_data = pd.DataFrame(data)
+            features = isp.get_favorite_songs(spfy, features=True)
+            data = isp.get_favorite_songs(spfy)
 
-    all_data = song_data.merge(song_feat, on='id', how='left')
+            song_feat = pd.DataFrame(features)
+            song_data = pd.DataFrame(data)
 
-    print(all_data)
+            all_data = song_data.merge(song_feat, on='id', how='left')
+
+            all_data.to_csv(filepath)
+            print("Downloaded data:")
+            print(all_data)
+
+        return all_data
+
+    saved_data = maybe_download('belzedu')
 
     # Returns a numpy array with shape (num_features, 1)
     features = ['loudness', 'energy']
-    my_center = get_centers(all_data, features=features)
+    my_center = get_centers(saved_data)
 
-    print(my_center)
+    sample = saved_data.iloc[0]
+
+    print(exponential_distance(sample, my_center))
