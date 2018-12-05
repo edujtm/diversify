@@ -6,7 +6,9 @@ COLUMN_NAMES = ['speechiness', 'valence', 'liveness', 'danceability', 'loudness'
 
 
 FEATURE_COLUMNS = {column: tf.feature_column.numeric_column(key=column) for column in COLUMN_NAMES}
-#FEATURE_COLUMN = tf.feature_column.numeric_column(key='features', dtype=tf.float32)
+
+def get_columns(features):
+    return {feature: tf.feature_column.numeric_column(key=feature) for feature in features}
 
 
 def cluster_input_fn(features, labels=None):
@@ -30,7 +32,16 @@ def cluster_input_fn(features, labels=None):
     return dataset.shuffle(1000).batch(1000)
 
 
-def get_centers(data, labels=None, num_iterations=10):
+def get_centers(data, labels=None, num_iterations=10, features=None):
+
+    if features is None:
+        features = COLUMN_NAMES  
+    else:
+        for feat in features:
+            if feat not in COLUMN_NAMES:
+                raise ValueError("All elements in the features list must be in the set: {}".format(COLUMN_NAMES))
+
+    feat_columns = get_columns(features)
 
     num_clusters = 1
     if labels is not None:
@@ -38,7 +49,7 @@ def get_centers(data, labels=None, num_iterations=10):
 
     kmeans = tf.contrib.factorization.KMeansClustering(
         num_clusters=num_clusters, use_mini_batch=False,
-        feature_columns=FEATURE_COLUMNS.values(),
+        feature_columns=feat_columns.values(),
     )
 
     for _ in range(num_iterations):
@@ -73,6 +84,7 @@ if __name__ == '__main__':
     print(all_data)
 
     # Returns a numpy array with shape (num_features, 1)
-    my_center = get_centers(all_data[COLUMN_NAMES])
+    features = ['loudness', 'energy']
+    my_center = get_centers(all_data, features=features)
 
     print(my_center)
