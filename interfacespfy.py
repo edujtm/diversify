@@ -20,9 +20,13 @@
 import spotipy
 import spotipy.util as util
 import numpy as np
-import sys, csv, os
+import csv
 import argparse
 from dotenv import load_dotenv
+from collections import abc
+from concurrent import futures
+from urllib.parse import urlparse
+import asyncio
 
 load_dotenv()
 
@@ -333,6 +337,51 @@ def _get_song_info(json_response):
     return result
 
 
+# --------  Still Unused  --------
+
+class AsyncPaginator:
+    def __init__(self, spfy, paging_object):
+        """
+            This class tries to make the requests for pagination objects
+            from the Spotify Web API asynchronoursly, but it still not used
+            because of rate limitations from the api
+            when making a lot of requests in parallel.
+        :param spfy: The Spotipy Session Object
+        :param paging_object: A Paging Object from Spotify Web API
+        """
+        self.paging = paging_object
+        self.limit = paging_object['limit']
+        self.total = paging_object['total']
+        self.executor = futures.ThreadPoolExecutor(10)
+        self.spfy = spfy
+        self.loop = asyncio.get_event_loop()
+
+    def run(self):
+        # The first request is made synchronously to get the base url
+        first = [self.paging]
+
+        old_url = urlparse(self.paging['href'])
+
+        base_url = old_url.scheme + '://' + old_url.netloc + old_url.path
+
+        tasks = []
+        for i in range(self.limit, self.total, self.limit):
+            new_url = base_url + f'?offset={i}&limit={self.limit}'
+            task = asyncio.ensure_future(self.get_next(new_url))
+            tasks.append(task)
+
+        # Run all requests in the thread pool, making them asynchronous
+        results = asyncio.gather(*tasks)
+
+        rest = self.loop.run_until_complete(results)
+        first.extend(rest)
+        return first
+
+    async def get_next(self, url):
+        result = {'next': url}
+        return await self.loop.run_in_executor(self.executor, self.spfy.next, result)
+
+
 class HighLimitException(Exception):
     def __init__(self, message):
         super(HighLimitException, self).__init__(message)
@@ -365,7 +414,7 @@ if __name__ == '__main__':
     print("This is a sample program that will search for your saved songs and write them to a file in csvfile/ folder")
     sp = login_user(username)
 
-    fsongs = get_favorite_songs(sp, features=True)
+    fsongs = get_user_playlists(sp, '12144777067', features=True)
 
     dfsongs = pd.DataFrame(fsongs)
     pprint.pprint(dfsongs)

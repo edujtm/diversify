@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 import scipy.stats as scp
 
+# TODO Normalize loudness and tempo to become a value between 0 and 1
 COLUMN_NAMES = ['speechiness', 'valence', 'liveness', 'danceability', 'loudness', 'acousticness',
                 'instrumentalness', 'energy', 'tempo']
 
@@ -59,7 +60,7 @@ def get_centers(data, labels=None, num_iterations=10, features=None):
     return kmeans.cluster_centers()
 
 
-def exponential_distance(song, user_center, features=None):
+def exponential_distance(song, user_center, cov, features=None):
     if features is None:
         features = COLUMN_NAMES
     try:
@@ -72,13 +73,12 @@ def exponential_distance(song, user_center, features=None):
     assert song_feat.shape == user_center.shape, "song feature shape is different from the user preference vector's " \
                                                  "shape: {} != {}".format(song_feat.shape, user_center.shape)
 
-    print(song_feat - user_center)
-    norm = np.linalg.norm(song_feat - user_center) ** 2
+    norm = -0.5 * np.linalg.norm(song_feat - user_center) ** 2
     print(f"norm is {norm}")
 
     identity = np.eye(n_dim, dtype=np.float64)
     mean = user_center.flatten()
-    return scp.multivariate_normal.pdf(song_feat, mean, identity)
+    return scp.multivariate_normal.pdf(song_feat, mean, cov)
 
 
 def playlist_score(playlist, center):
@@ -130,6 +130,9 @@ if __name__ == '__main__':
     features = ['loudness', 'energy']
     my_center = get_centers(saved_data)
 
-    sample = saved_data.iloc[0]
+    samples = saved_data.sample(50)
 
-    print(exponential_distance(sample, my_center))
+    cov = np.cov(saved_data[COLUMN_NAMES].values.T)
+    for pos, song in samples.iterrows():
+        print(song['name'])
+        print(exponential_distance(song, my_center, cov))
