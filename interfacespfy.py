@@ -194,13 +194,17 @@ class SpotifySession:
 
         playlists = self._for_all(playlist_query, _get_all_playlists)
 
+        result = playlists
         if features:
-            result = []
-            for name, playlist in playlists:
-                result.extend(self.get_features(playlist))
+            result = [(name, self.get_features(playlist)) for name, playlist in playlists]
+
+        if not flat:
             return result
-        else:
-            return playlists
+
+        flattened = []
+        for name, playlist in result:
+            flattened.extend(playlist)
+        return flattened
 
     def get_new_songs(self, seed_tracks, country=None, features=False):
         local_limit = 100

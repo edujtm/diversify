@@ -34,11 +34,11 @@ These steps are annoying but are needed because I didn't deploy this app somewhe
 - With the previous step done, you can import the interfacespfy module in an interactive prompt
 
 ```Python
-import interfacespfy as isp
-spfy = isp.login_user("username")
+from interfacespfy import SpotifySession
+spfy = SpotifySession("username")
 
-playlists = isp.get_user_playlists(spfy, "other_username")
-saved_songs = isp.get_favorite_songs(spfy)
+playlists = spfy.get_user_playlists("other_username")
+saved_songs = spfy.get_favorite_songs()
 ```
 
 - You can generate playlists by running `python3 diversify.py`. (run python3 diversify.py --help for more info) <br/>
