@@ -169,9 +169,13 @@ class SpotifySession:
             The return is a list of playlists with each being represented by a
             tuple of (name, list of songs (each being a dict with song info)).
 
+            If flat is True, all playlists are going to be merged into one big list.
+
             :param userid:  The Spotify ID of the playlits' owner
+            :param limit: limit for the pagination API
             :param features: If true, gets features instead of song data. default: False
-            :return: A list of lists representing songs in each public playlists.
+            :param flat: flattens the result
+            :return: A list of tuples representing playlists for each public playlist of userid.
             """
 
         local_limit = limit
