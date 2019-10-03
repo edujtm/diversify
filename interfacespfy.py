@@ -22,13 +22,9 @@ import spotipy.util as util
 import numpy as np
 import sys, csv, os
 import argparse
-# from dotenv import load_dotenv
+from dotenv import load_dotenv
 
-# load_dotenv()
-
-_client_id = '5d6d117598a94245a84a726981fa6e3b'
-_client_secret = 'af28dec05f2743d0acb671fd458b783f'
-_redirect_uri = 'http://localhost/'
+load_dotenv()
 
 _scope = ['user-library-read', 'playlist-modify-private']
 _fields = ['id', 'speechiness', 'valence', 'mode', 'liveness', 'key', 'danceability', 'loudness', 'acousticness',
@@ -48,12 +44,15 @@ def login_user(username, scope=None):
     :param scope: Array with permission strings
     :return: spotipy.Spotify object with user session
     """
+
+    if not os.getenv('SPOTIPY_CLIENT_ID'):
+        raise SystemExit("Spotify application credentials are missing. Rename .env.example to .env and fill in the values")
+
     if scope is None:
         scope = _scope
 
     # TODO check if empty scope array will break the api call
-    token = util.prompt_for_user_token(username, ' '.join(scope), client_id=_client_id, client_secret=_client_secret,
-                                       redirect_uri=_redirect_uri)
+    token = util.prompt_for_user_token(username, ' '.join(scope))
     if token:
         return spotipy.Spotify(auth=token)
     else:
