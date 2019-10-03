@@ -42,3 +42,9 @@ These steps are annoying but are needed because I didn't deploy this app somewhe
 
 - You can generate playlists by running `python3 diversify.py`. (run python3 diversify.py --help for more info) <br/>
     Example: `python3 diversify.py your_id -u2 your_friend_id -p my awesome playlist`
+
+## Warnings
+	
+The files in the tf/ folder and splearn.py are not used, I was trying to implement the algorithm using neural networks or clustering but i didn't finish. I'll probably remove them in the future.
+
+I didn't run much tests when making this app, so there might be errors that I didn't check for when getting data from the spofity API. You can expect some errors when running the scripts.
