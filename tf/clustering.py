@@ -36,7 +36,7 @@ def cluster_input_fn(features, labels=None):
 def get_centers(data, labels=None, num_iterations=10, features=None):
 
     if features is None:
-        features = COLUMN_NAMES  
+        features = COLUMN_NAMES
     else:
         for feat in features:
             if feat not in COLUMN_NAMES:
@@ -70,12 +70,12 @@ if __name__ == '__main__':
 
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 
-    import interfacespfy as isp
+    from interfacespfy import SpotifySession
 
-    spfy = isp.login_user('belzedu')
+    spfy = SpotifySession('belzedu')
 
-    features = isp.get_favorite_songs(spfy, features=True)
-    data = isp.get_favorite_songs(spfy)
+    features = spfy.get_favorite_songs(features=True)
+    data = spfy.get_favorite_songs(spfy)
 
     song_feat = pd.DataFrame(features)
     song_data = pd.DataFrame(data)

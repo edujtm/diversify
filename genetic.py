@@ -1,11 +1,12 @@
 import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
-
 import random
 import pandas as pd
 import numpy as np
-import interfacespfy as isp
 import pprint
+
+from interfacespfy import SpotifySession
+
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 population_size = 20
 genes_size = 20
@@ -13,11 +14,11 @@ crossover_rate = 0.7
 maxiter = 50
 
 _columns = ['speechiness', 'liveness', 'danceability', 'loudness', 'acousticness',
-           'instrumentalness', 'energy', 'tempo']
+            'instrumentalness', 'energy', 'tempo']
 
-_user1 = None       # Music list for first user
-_user2 = None       # Music list for second user
-_nsongs = None      # Random music list for mutations
+_user1 = None  # Music list for first user
+_user2 = None  # Music list for second user
+_nsongs = None  # Random music list for mutations
 _twousers = False
 
 
@@ -87,9 +88,9 @@ def generate_children(parents):
         parent2 = random.choice(parents)
 
         if random.random() < crossover_rate:
-            cut = random.randint(1, len(parent1)-1)
-            child1 = parent1.sample(cut).append(parent2.sample(genes_size-cut))
-            child2 = parent2.sample(cut).append(parent1.sample(genes_size-cut))
+            cut = random.randint(1, len(parent1) - 1)
+            child1 = parent1.sample(cut).append(parent2.sample(genes_size - cut))
+            child2 = parent2.sample(cut).append(parent1.sample(genes_size - cut))
             child1 = remove_duplicates(child1)
             child2 = remove_duplicates(child2)
             if not child1.index.unique or not child2.index.unique:
@@ -138,8 +139,8 @@ def start(spfy, user1, user2=None):
         samples = _user1.sample(4)
 
     seeds = [{'id': value} for value in samples.index]
-    nsongs = isp.get_new_songs(spfy, seeds)
-    _nsongs = pd.DataFrame(isp.get_features(spfy, nsongs))
+    nsongs = spfy.get_new_songs(seeds)
+    _nsongs = pd.DataFrame(spfy.get_features(nsongs))
     _nsongs.set_index('id', inplace=True)
 
     pop = run()
@@ -188,7 +189,7 @@ if __name__ == '__main__':
     indv1 = pd.read_csv('csvfiles/playlistfeatures.csv')
     indv2 = pd.read_csv('csvfiles/maxmyllercarvalhofeatures.csv')
 
-    spfy = isp.login_user(user)
+    spfy = SpotifySession(user)
 
     _user1 = indv1[:genes_size][_columns + ['id']]
     _user2 = indv2[:genes_size][_columns + ['id']]
@@ -200,4 +201,4 @@ if __name__ == '__main__':
 
     pprint.pprint(result)
     resultids = result.index.tolist()
-    isp.tracks_to_playlist(spfy, user, trackids=resultids, name=pl_name)
+    spfy.tracks_to_playlist(user, trackids=resultids, name=pl_name)
