@@ -7,6 +7,7 @@ COLUMN_NAMES = ['speechiness', 'valence', 'liveness', 'danceability', 'loudness'
 
 FEATURE_COLUMNS = {column: tf.feature_column.numeric_column(key=column) for column in COLUMN_NAMES}
 
+
 def get_columns(features):
     return {feature: tf.feature_column.numeric_column(key=feature) for feature in features}
 

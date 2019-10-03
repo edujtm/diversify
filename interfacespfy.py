@@ -22,9 +22,9 @@ import spotipy.util as util
 import numpy as np
 import sys, csv, os
 import argparse
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
-load_dotenv()
+# load_dotenv()
 
 _client_id = '5d6d117598a94245a84a726981fa6e3b'
 _client_secret = 'af28dec05f2743d0acb671fd458b783f'
