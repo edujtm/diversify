@@ -38,7 +38,7 @@ description_hint = """
 
         http://localhost/?code={code-pattern}
 
-        where you should copy the code-pattern and paste into your terminal. 
+        where you should copy the whole URL and paste into your terminal. 
         These steps are only necessary once and are a current limitation of the
         spotify WEB API.
 
