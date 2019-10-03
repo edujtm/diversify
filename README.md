@@ -26,18 +26,19 @@ but this may improve in the future.
 
 These steps are annoying but are needed because I didn't deploy this app somewhere yet, I have plans to deploy it once I make it faster.
 
+- Clone this repo: `git clone https://github.com/edujtm/diversify.git`
+
 - Create a new environment with your package manager or install the dependencies in environment.yml with pip. <br/>
 	Personally I use anaconda, so it's just a matter of running `conda env create --file=environmnent.yml` and then `conda activate diversify`
 
 - With the previous step done, you can import the interfacespfy module in an interactive prompt
 
 ```Python
-	import interfacespfy as isp
-	spfy = isp.login_user("username")
+import interfacespfy as isp
+spfy = isp.login_user("username")
 
-	playlists = isp.get_user_playlists(spfy, "other_username")
-	saved_songs = isp.get_favorite_songs(spfy)
-
+playlists = isp.get_user_playlists(spfy, "other_username")
+saved_songs = isp.get_favorite_songs(spfy)
 ```
 
 - You can generate playlists by running `python3 diversify.py`. (run python3 diversify.py --help for more info) <br/>
