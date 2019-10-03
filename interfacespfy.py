@@ -121,6 +121,15 @@ def get_user_playlists(spfy, userid, features=False, flat=False):
 
     playlists = _for_all(playlist_query, _get_all_playlists, spfy)
 
+    if flat:
+        result = []
+        for playlist in playlists:
+            for song in playlist[1]:
+                result.append(song)
+        return result
+    else:
+        return playlists
+
     if features:
         result = []
         for name, playlist in playlists:
