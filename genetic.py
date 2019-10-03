@@ -139,8 +139,8 @@ def start(spfy, user1, user2=None):
         samples = _user1.sample(4)
 
     seeds = [{'id': value} for value in samples.index]
-    nsongs = isp.get_new_songs(spfy, seeds)
-    _nsongs = pd.DataFrame(isp.get_features(spfy, nsongs))
+    nsongs = spfy.get_new_songs(seeds)
+    _nsongs = pd.DataFrame(spfy.get_features(nsongs))
     _nsongs.set_index('id', inplace=True)
 
     pop = run()
