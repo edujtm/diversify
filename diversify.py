@@ -1,13 +1,12 @@
-
 import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
-
-import sys
-import interfacespfy as isp
 import genetic as gen
 import pandas as pd
 import pprint
 import argparse
+
+from interfacespfy import SpotifySession
+
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 twousers = False
 
@@ -16,7 +15,7 @@ def get_songs(spfy, userid):
     try:
         return pd.read_csv('csvfiles/' + userid + 'features.csv')
     except FileNotFoundError:
-        result = isp.get_user_playlists(spfy, userid, features=True)
+        result = spfy.get_user_playlists(userid, features=True)
         return pd.DataFrame(result)
 
 
@@ -62,7 +61,7 @@ plistname = ' '.join(args.playlist_name)
 username1 = args.user1
 username2 = args.user2
 
-spfy = isp.login_user(username1)
+spfy = SpotifySession(username1)
 
 user1 = get_songs(spfy, username1)
 
@@ -75,4 +74,4 @@ else:
 
 pprint.pprint(result)
 resultids = result.index.tolist()
-isp.tracks_to_playlist(spfy, username1, trackids=resultids, name=plistname)
+spfy.tracks_to_playlist(username1, trackids=resultids, name=plistname)

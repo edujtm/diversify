@@ -1,5 +1,4 @@
 import numpy as np
-import interfacespfy as isp
 import pprint
 import pandas as pd
 
@@ -40,16 +39,16 @@ def load_mlearn(spfy, users):
     feat = []
     try:
         for user in users:
-            query = isp.get_user_playlists(spfy, user, limit=10)
+            query = spfy.get_user_playlists(user, limit=10)
             userlist = []
             for playlist in query:
-                featarray = isp.get_features(spfy, playlist, limit=10)
+                featarray = spfy.get_features(playlist, limit=10)
                 feat.extend(featarray)
                 userlist.extend(playlist)
             songs.append((user, userlist))
     except TypeError:
-        songs = isp.get_user_playlists(spfy, users, limit=10)
-        feat = isp.get_features(spfy, songs, limit=10)
+        songs = spfy.get_user_playlists(spfy, users, limit=10)
+        feat = spfy.get_features(spfy, songs, limit=10)
 
     datafeat = pd.DataFrame(feat).set_index("id")
     preferences = []
