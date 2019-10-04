@@ -19,6 +19,8 @@
 import argparse
 import csv
 import os
+from typing import List, Callable, Any, Tuple, \
+    Dict, Union, Optional, Iterator
 
 import numpy as np
 import spotipy
@@ -35,21 +37,31 @@ _fields = ['id', 'speechiness', 'valence', 'mode', 'liveness', 'key', 'danceabil
 
 _limit = 50
 
+# TODO move these to a types files after organizing folders
+# type hints
+
+# The song features has different fields than metadata (TypedDict would fit better here)
+AudioFeatures = Dict[str, Any]
+SongMetadata = Dict[str, Any]
+
+Playlist = Tuple[str, List[SongMetadata]]
+JsonObject = Dict[str, Any]
+
 
 class SpotifySession:
-    def __init__(self, username_: str, scope=None):
+    def __init__(self, username_: str, scope: List[str]=None):
         """
         Logs the user to the Spotify WEB API with permissions declared in scope.
         Default permissions are 'user-library-read' and 'playlist-modify-private'.
         The return object is necessary to make further spotify queries, so this
         should be the first method to be called when using this module.
-        :param username_: username for spptify web api
+        :param username_: username for spotify web api
         :param scope: permission scopes
         """
         self._scope = scope or _scope
         self._session = self._login_user(username_)
 
-    def _for_all(self, json_response, func):
+    def _for_all(self, json_response: JsonObject, func: Callable[[JsonObject], List[Any]]) -> List[Any]:
         """
 
         :param json_response: A pagination object returned from a http request
@@ -66,7 +78,7 @@ class SpotifySession:
         return result
 
     @staticmethod
-    def _write_csv(featarray, filename):
+    def _write_csv(featarray: List[AudioFeatures], filename: str) -> None:
         """
         Write the filtered features in the file described by the
         path in filename.
@@ -86,7 +98,7 @@ class SpotifySession:
             csvfile.close()
 
     @staticmethod
-    def _get_song_info(json_response):
+    def _get_song_info(json_response: JsonObject) -> List[SongMetadata]:
         fields = ['name', 'id', 'popularity', 'duration_ms']
 
         result = []
@@ -102,7 +114,7 @@ class SpotifySession:
         return result
 
     @staticmethod
-    def _filter_audio_features(analysis):
+    def _filter_audio_features(analysis) -> Iterator[AudioFeatures]:
         """
         Internal method to filter the spotify audio features object
         with only the meaningful features.
@@ -114,7 +126,7 @@ class SpotifySession:
             ftrack = {field: track[field] for field in _fields}
             yield ftrack
 
-    def _login_user(self, username):
+    def _login_user(self, username: str) -> spotipy.Spotify:
         if not os.getenv('SPOTIPY_CLIENT_ID'):
             raise SystemExit(
                 "Spotify application credentials are missing. Rename .env.example to .env and"
@@ -126,7 +138,7 @@ class SpotifySession:
         else:
             print("Not able to get token for:", username)
 
-    def get_features(self, tracks, limit=10):
+    def get_features(self, tracks: List[SongMetadata], limit: int = 10) -> List[AudioFeatures]:
         """
         Queries the spotify WEB API for the features of a list of songs
         as described by the Audio Analysis object from the Spotify object
@@ -154,7 +166,7 @@ class SpotifySession:
 
         return all_feat
 
-    def get_favorite_songs(self, features=False):
+    def get_favorite_songs(self, features: bool = False) -> Union[List[SongMetadata], List[AudioFeatures]]:
         local_limit = 50
 
         results = self._session.current_user_saved_tracks(local_limit)
@@ -166,7 +178,10 @@ class SpotifySession:
         else:
             return songs
 
-    def get_user_playlists(self, userid, limit=10, features=False, flat=False):
+    def get_user_playlists(self, userid: str,
+                           limit: int = 10,
+                           features: bool = False,
+                           flat: bool = False):
         """
             Queries the spotify WEB API for the musics in the public playlists
             from the user with the userid (Spotify ID).
@@ -217,7 +232,10 @@ class SpotifySession:
             flattened.extend(playlist)
         return flattened
 
-    def get_new_songs(self, seed_tracks, country=None, features=False):
+    def get_new_songs(self,
+                      seed_tracks: List[SongMetadata],
+                      country: Optional[str] = None,
+                      features: bool = False):
         local_limit = 100
         trackids = [track['id'] for track in seed_tracks]
         fids = np.random.choice(trackids, 5)
@@ -231,7 +249,7 @@ class SpotifySession:
         else:
             return songs
 
-    def show_tracks(self, tracks):
+    def show_tracks(self, tracks: JsonObject) -> None:
         """
 
         Show tracks from a Spotify object (Paging object) that contains an array of
@@ -244,7 +262,7 @@ class SpotifySession:
             track = item['track']
             print("{0} {1:32.32s} {2:32s}".format(idx, track['artists'][0]['name'], track['name']))
 
-    def user_playlists_to_csv(self, userid, filename=None):
+    def user_playlists_to_csv(self, userid: str, filename: Optional[str] = None) -> None:
         """
 
         Writes a csv file in csvfile/ folder with information about music preferences
@@ -264,15 +282,12 @@ class SpotifySession:
         if filename is None:
             filename = "csvfiles/" + str(userid) + "features.csv"
 
-        playlists = self.get_user_playlists(userid)
-
-        featarray = []
-        for playlist in playlists:
-            featarray.extend(self.get_features(playlist))
+        all_songs = self.get_user_playlists(userid, flat=True)
+        featarray = self.get_features(all_songs)
 
         self._write_csv(featarray, filename)
 
-    def playlist_to_csv(self, playlist, filename=None):
+    def playlist_to_csv(self, playlist: List[SongMetadata], filename: Optional[str] = None) -> None:
         """
         Writes a csv file with the features from a list with songs IDs in the
         path described by filename.
@@ -284,7 +299,7 @@ class SpotifySession:
         features = self.get_features(playlist)
         self._write_csv(features, filename or 'csvfiles/playlistfeatures.csv')
 
-    def get_genres(self, artists_ids):
+    def get_genres(self, artists_ids) -> Iterator[str]:
         """
         The spofify API currently does not have genres available.
         Left this code here to adapt it for requesting more songs in
@@ -302,7 +317,7 @@ class SpotifySession:
                 else:
                     yield 'Not available'
 
-    def tracks_to_playlist(self, userid, trackids, name=None):
+    def tracks_to_playlist(self, userid: str, trackids: List[SongMetadata], name: Optional[str] = None) -> None:
         if name is None:
             name = 'Diversify playlist'
         result = self._session.user_playlist_create(userid, name, public=False)
@@ -350,4 +365,5 @@ if __name__ == '__main__':
     pprint.pprint(dfsongs)
 
     path = 'csvfiles/' + fname + '.csv'
-    sp.playlist_to_csv(fsongs, filename=path)
+    # sp.playlist_to_csv(fsongs, filename=path)
+    sp.user_playlists_to_csv("belzedu")
