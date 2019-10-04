@@ -23,6 +23,7 @@ import os
 import numpy as np
 import spotipy
 import spotipy.util as util
+from asyncutils import AsyncPaginator
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -49,13 +50,19 @@ class SpotifySession:
         self._session = self._login_user(username_)
 
     def _for_all(self, json_response, func):
+        """
+
+        :param json_response: A pagination object returned from a http request
+        :param func: Function that parses a pagination object into a list of objects
+        :return: All the data gathered from all the pages
+        """
+        paginator = AsyncPaginator(self._session, json_response)
+        jsons = paginator.run()
+
         result = []
-        while True:
-            part = func(json_response)
-            result.extend(part)
-            if not json_response['next']:
-                break
-            json_response = self._session.next(json_response)
+        for json in jsons:
+            result.extend(func(json))
+
         return result
 
     @staticmethod
