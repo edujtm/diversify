@@ -64,8 +64,13 @@ class AsyncPaginator:
 if __name__ == '__main__':
     """
         Comparison between synchronous and asynchronous execution.
+        *** 
+        This is not comparing it anymore, since both implementation are actually using
+        the paginator
+        ***
     """
     from interfacespfy import SpotifySession
+    import time
 
     spfy = SpotifySession("belzedu")
 
