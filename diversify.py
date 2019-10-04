@@ -24,10 +24,10 @@ description_hint = """
         ----------------------------
         
         This program will create a new playlist in your account based on your 
-        and your friend's Spotify public playlists, trying to please both of 
-        your musical tastes.
+        saved songs and your friend's Spotify public playlists, trying to 
+        please both of your musical tastes.
         
-        The playlist will be saved on the account of the first user.
+        The playlist will be saved on your account.
 
         The app will redirect you to a page in your browser,
         where you will be asked to login into your spotify account.
