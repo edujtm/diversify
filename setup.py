@@ -9,7 +9,7 @@ setup(name='diversify',
       license='MIT',
       install_requires=[
           'numpy', 'pandas',
-          'spotipy', 'tensorflow',
+          'spotipy', 'click',
           'python-dotenv', 
       ],
       zip_safe=False)

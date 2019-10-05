@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import pprint
 
-from interfacespfy import SpotifySession
+from session import SpotifySession
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
