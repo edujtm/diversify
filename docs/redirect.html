@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1, shrink-to-fit=no"
+		/>
+		<meta name="description" content="" />
+		<meta name="author" content="" />
+
+		<title>Diversify</title>
+
+		<!-- Bootstrap core CSS -->
+		<link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+
+		<!-- Custom fonts for this template -->
+		<link
+			href="https://fonts.googleapis.com/css?family=Lato:300,400,700,300italic,400italic,700italic"
+			rel="stylesheet"
+			type="text/css"
+		/>
+
+		<!-- Custom styles for this template -->
+		<link href="css/landing-page.min.css" rel="stylesheet" />
+	</head>
+
+	<body>
+		<!-- Navigation -->
+		<nav class="navbar navbar-dark">
+			<a class="navbar-brand" href="https://github.com/edujtm/diversify"
+				>Diversify</a
+			>
+		</nav>
+
+		<!-- Masthead -->
+		<div
+			class="toast spotify-green"
+			style="position: absolute; top: 2rem; right: 2rem; z-index: 2;"
+			data-delay="3000"
+		>
+			<div class="toast-body" style="color: white; background-color: #28a745;">
+				<div class="row">
+					<div class="col">
+						Copied to the clipboard!
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="container" style="height: 94vh;">
+			<div class="row justify-content-center" style="height: 94vh;">
+				<div class="col-sm-7" style="margin-top: auto;margin-bottom: auto;">
+					<div class="card shadow border-0 my-5">
+						<div class="card-body">
+							<div class="row justify-content-center">
+								<div class="col-sm">
+									<div class="text-center p-4">
+										<h4 class="text-white mb-4">
+											Please copy this code into the terminal.
+										</h4>
+									</div>
+									<div class="row pt-5 pr-5 pl-5">
+										<input
+											type="text"
+											class="form-control form-control-square"
+											id="code"
+											readonly
+										/>
+									</div>
+									<div class="row justify-content-center p-3">
+										<button
+											class="btn btn-success spotify-green"
+											onclick="copyToClipboard()"
+										>
+											Copy to clipboard!
+										</button>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Bootstrap core JavaScript -->
+		<script src="vendor/jquery/jquery.min.js"></script>
+		<script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+		<script>
+			// It needs to be the whole URL for now, I'll change to get only the code pattern later
+			$(document).ready(function() {
+				var url_string = window.location.href;
+				var url = new URL(url_string);
+				var c = url.searchParams.get("code");
+				document.getElementById("code").value = url_string
+			});
+		</script>
+		<script>
+			function copyToClipboard() {
+				/* Get the text field */
+				var copyText = document.getElementById("code");
+
+				/* Select the text field */
+				copyText.select();
+				copyText.setSelectionRange(0, 99999); /*For mobile devices*/
+
+				/* Copy the text inside the text field */
+				document.execCommand("copy");
+				/* Alert the copied text */
+				$(".toast").toast("show");
+			}
+		</script>
+	</body>
+</html>

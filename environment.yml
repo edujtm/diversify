@@ -11,3 +11,4 @@ dependencies:
     - pip:
           - spotipy==2.4.4
           - python-dotenv==0.9.1
+          - click==7.0

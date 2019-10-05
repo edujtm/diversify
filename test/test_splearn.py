@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 import numpy.testing as tst
-import splearn as spl
+from diversify import splearn as spl
 
 
 class TestSp(unittest.TestCase):

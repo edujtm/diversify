@@ -22,7 +22,7 @@ but this may improve in the future.
 	- put whatever name you'd like on the project info and say no to commercial integration
 	- get your client ID and client secret (by clicking *show client secret*)
 	- put them on your .env.example file and rename it to .env 
-	- click on edit settings and whitelist http://localhost/
+	- click on edit settings and whitelist https://edujtm.github.io/diversify/redirect
 
 These steps are annoying but are needed because I didn't deploy this app somewhere yet, I have plans to deploy it once I make it faster.
 
@@ -34,15 +34,15 @@ These steps are annoying but are needed because I didn't deploy this app somewhe
 - With the previous step done, you can import the interfacespfy module in an interactive prompt
 
 ```Python
-from interfacespfy import SpotifySession
+from diversify.session import SpotifySession
 spfy = SpotifySession("username")
 
 playlists = spfy.get_user_playlists("other_username")
 saved_songs = spfy.get_favorite_songs()
 ```
 
-- You can generate playlists by running `python3 diversify.py`. (run python3 diversify.py --help for more info) <br/>
-    Example: `python3 diversify.py your_id -u2 your_friend_id -p my awesome playlist`
+- You can generate playlists by running `python3 diversify/main.py`. (run python3 diversify/main.py --help for more info) <br/>
+    Example: `python3 diversify/main.py your_id -u2 your_friend_id -p my awesome playlist`
 
 ## Warnings
 	
