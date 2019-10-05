@@ -34,15 +34,15 @@ These steps are annoying but are needed because I didn't deploy this app somewhe
 - With the previous step done, you can import the interfacespfy module in an interactive prompt
 
 ```Python
-from interfacespfy import SpotifySession
+from diversify.session import SpotifySession
 spfy = SpotifySession("username")
 
 playlists = spfy.get_user_playlists("other_username")
 saved_songs = spfy.get_favorite_songs()
 ```
 
-- You can generate playlists by running `python3 diversify.py`. (run python3 diversify.py --help for more info) <br/>
-    Example: `python3 diversify.py your_id -u2 your_friend_id -p my awesome playlist`
+- You can generate playlists by running `python3 diversify/main.py`. (run python3 diversify/main.py --help for more info) <br/>
+    Example: `python3 diversify/main.py your_id -u2 your_friend_id -p my awesome playlist`
 
 ## Warnings
 	

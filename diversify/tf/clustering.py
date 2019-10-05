@@ -70,7 +70,7 @@ if __name__ == '__main__':
 
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
 
-    from interfacespfy import SpotifySession
+    from diversify.session import SpotifySession
 
     spfy = SpotifySession('belzedu')
 
