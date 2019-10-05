@@ -22,7 +22,7 @@ but this may improve in the future.
 	- put whatever name you'd like on the project info and say no to commercial integration
 	- get your client ID and client secret (by clicking *show client secret*)
 	- put them on your .env.example file and rename it to .env 
-	- click on edit settings and whitelist http://localhost/
+	- click on edit settings and whitelist https://edujtm.github.io/diversify/redirect
 
 These steps are annoying but are needed because I didn't deploy this app somewhere yet, I have plans to deploy it once I make it faster.
 
