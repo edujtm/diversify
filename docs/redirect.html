@@ -87,11 +87,12 @@
 		<script src="vendor/jquery/jquery.min.js"></script>
 		<script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 		<script>
+			// It needs to be the whole URL for now, I'll change to get only the code pattern later
 			$(document).ready(function() {
 				var url_string = window.location.href;
 				var url = new URL(url_string);
 				var c = url.searchParams.get("code");
-				document.getElementById("code").value = "?code=" + c;
+				document.getElementById("code").value = url_string
 			});
 		</script>
 		<script>
