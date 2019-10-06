@@ -19,17 +19,19 @@
 import argparse
 import csv
 import os
+import json
+import pprint
+import spotipy
+import numpy as np
+import diversify.utils as utils
+
 from typing import List, Callable, Any, Tuple, \
     Dict, Union, Optional, Iterator
-
-import numpy as np
-import spotipy
-import spotipy.util as util
 from dotenv import load_dotenv
+from diversify.constants import SCOPE
 
 load_dotenv()
 
-_scope = ['user-library-read', 'playlist-modify-private']
 _fields = ['id', 'speechiness', 'valence', 'mode', 'liveness', 'key', 'danceability', 'loudness',
            'acousticness',
            'instrumentalness', 'energy', 'tempo']
@@ -48,17 +50,21 @@ JsonObject = Dict[str, Any]
 
 
 class SpotifySession:
-    def __init__(self, username_: str, scope: List[str]=None):
+    def __init__(self, authenticate: bool = True):
         """
         Logs the user to the Spotify WEB API with permissions declared in scope.
         Default permissions are 'user-library-read' and 'playlist-modify-private'.
         The return object is necessary to make further spotify queries, so this
         should be the first method to be called when using this module.
-        :param username_: username for spotify web api
-        :param scope: permission scopes
+
+        If the username is not passed, it'll get information from cache. In other
+        words, it assumes it's already logged.
+
+        :param authenticate: If true, use web browser authentication, else cached info.
         """
-        self._scope = scope or _scope
-        self._session = self._login_user(username_)
+
+        self._session = self._get_session(authenticate)
+        self._current_user = self._session.current_user()['id']
 
     def _for_all(self, json_response: JsonObject, func: Callable[[JsonObject], List[Any]]) -> List[Any]:
         result = []
@@ -119,17 +125,24 @@ class SpotifySession:
             ftrack = {field: track[field] for field in _fields}
             yield ftrack
 
-    def _login_user(self, username: str) -> spotipy.Spotify:
+    def _get_session(self, authenticate: bool = True) -> spotipy.Spotify:
         if not os.getenv('SPOTIPY_CLIENT_ID'):
             raise SystemExit(
                 "Spotify application credentials are missing. Rename .env.example to .env and"
                 " fill in the values"
             )
-        token = util.prompt_for_user_token(username, ' '.join(self._scope))
+        if authenticate:
+            token = utils.login_user()
+        else:
+            token = utils.cached_token(scope=SCOPE)
+
         if token:
             return spotipy.Spotify(auth=token)
         else:
-            print("Not able to get token for:", username)
+            if authenticate:
+                raise utils.DiversifyError(f"Unable to log in to your account")
+            else:
+                raise utils.DiversifyError("You are not logged in. Run [diversify login USERNAME] to log in.")
 
     def get_features(self, tracks: List[SongMetadata], limit: int = 10) -> List[AudioFeatures]:
         """
@@ -171,13 +184,16 @@ class SpotifySession:
         else:
             return songs
 
-    def get_user_playlists(self, userid: str,
+    def get_user_playlists(self, userid: Optional[str] = None,
                            limit: int = 10,
                            features: bool = False,
                            flat: bool = False):
         """
             Queries the spotify WEB API for the musics in the public playlists
             from the user with the userid (Spotify ID).
+
+            if userid is not passed, it will get the playlists songs from the current
+            logged user.
 
             The limit is the number of songs per playlists that will be returned.
 
@@ -194,6 +210,9 @@ class SpotifySession:
             """
 
         local_limit = limit
+
+        if not userid:
+            userid = self._current_user
 
         # Returns a Spotify object (paging object) with playlists
         playlist_query = self._session.user_playlists(userid, local_limit)
@@ -255,7 +274,7 @@ class SpotifySession:
             track = item['track']
             print("{0} {1:32.32s} {2:32s}".format(idx, track['artists'][0]['name'], track['name']))
 
-    def user_playlists_to_csv(self, userid: str, filename: Optional[str] = None) -> None:
+    def user_playlists_to_csv(self, userid: Optional[str], filename: Optional[str] = None) -> None:
         """
 
         Writes a csv file in csvfile/ folder with information about music preferences
@@ -271,6 +290,9 @@ class SpotifySession:
         :param filename: The name of the csv file to be written in
         :return: None
         """
+
+        if not userid:
+            userid = self._current_user
 
         if filename is None:
             filename = "csvfiles/" + str(userid) + "features.csv"
@@ -310,9 +332,10 @@ class SpotifySession:
                 else:
                     yield 'Not available'
 
-    def tracks_to_playlist(self, userid: str, trackids: List[SongMetadata], name: Optional[str] = None) -> None:
+    def tracks_to_playlist(self, trackids: List[SongMetadata], name: Optional[str] = None) -> None:
         if name is None:
             name = 'Diversify playlist'
+        userid = self._current_user
         result = self._session.user_playlist_create(userid, name, public=False)
         self._session.user_playlist_add_tracks(userid, result['id'], trackids)
 
@@ -336,21 +359,19 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=hint,
                                      formatter_class=argparse.RawTextHelpFormatter)
 
-    parser.add_argument('user', help='You spotifity URI')
     parser.add_argument('-f', dest='filename',
                         help='The filename where the info is going to be saved')
 
     args = parser.parse_args()
 
-    username = args.user
     fname = 'playlistfeatures'
     if args.filename:
         fname = args.filename
 
-    print("Logging:", username)
     print(
         "This is a sample program that will search for your saved songs and write them to a file in csvfile/ folder")
-    sp = SpotifySession(username)
+
+    sp = SpotifySession()
 
     fsongs = sp.get_favorite_songs(features=True)
 
@@ -358,5 +379,4 @@ if __name__ == '__main__':
     pprint.pprint(dfsongs)
 
     path = 'csvfiles/' + fname + '.csv'
-    # sp.playlist_to_csv(fsongs, filename=path)
-    sp.user_playlists_to_csv("belzedu")
+    sp.playlist_to_csv(fsongs, filename=path)

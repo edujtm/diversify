@@ -35,7 +35,7 @@ These steps are annoying but are needed because I didn't deploy this app somewhe
 
 ```Python
 from diversify.session import SpotifySession
-spfy = SpotifySession("username")
+spfy = SpotifySession()
 
 playlists = spfy.get_user_playlists("other_username")
 saved_songs = spfy.get_favorite_songs()

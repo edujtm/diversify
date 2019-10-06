@@ -3,8 +3,9 @@ import random
 import pandas as pd
 import numpy as np
 import pprint
+import click
 
-from session import SpotifySession
+from diversify.session import SpotifySession
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -108,7 +109,6 @@ def mutation(indv, prob):
         rest = _nsongs.sample(len(indv) // 2)
         dropped = indv.drop(indv.index[::2])
         result = dropped.append(rest)
-        print('mutation -', len(result))
         result = remove_duplicates(result)
         # if len(result) == 20:       # Gambiarra master
         return result
@@ -118,11 +118,11 @@ def mutation(indv, prob):
 def run():
     pop = generate_population()
 
-    for iteration in range(maxiter):
-        print(iteration)
-        parents = select_parents(pop)
-        children = generate_children(parents)
-        pop = [mutation(child, 0.01) for child in children]
+    with click.progressbar(range(maxiter)) as bar:
+        for _ in bar:
+            parents = select_parents(pop)
+            children = generate_children(parents)
+            pop = [mutation(child, 0.01) for child in children]
 
     return pop
 
@@ -176,20 +176,17 @@ if __name__ == '__main__':
 
     parser = ArgumentParser(prog='python3 genetic.py',
                             description=description_hint, formatter_class=RawTextHelpFormatter)
-
-    parser.add_argument('user', help='Your Spotify URI')
     parser.add_argument('-p', '--playlist_name', nargs='+', default=['Genetic playlist'],
                         help='The name for the playlist that will be created')
 
     args = parser.parse_args()
 
     pl_name = ' '.join(args.playlist_name)
-    user = args.user
 
     indv1 = pd.read_csv('csvfiles/playlistfeatures.csv')
     indv2 = pd.read_csv('csvfiles/maxmyllercarvalhofeatures.csv')
 
-    spfy = SpotifySession(user)
+    spfy = SpotifySession()
 
     _user1 = indv1[:genes_size][_columns + ['id']]
     _user2 = indv2[:genes_size][_columns + ['id']]
@@ -201,4 +198,4 @@ if __name__ == '__main__':
 
     pprint.pprint(result)
     resultids = result.index.tolist()
-    spfy.tracks_to_playlist(user, trackids=resultids, name=pl_name)
+    spfy.tracks_to_playlist(trackids=resultids, name=pl_name)
