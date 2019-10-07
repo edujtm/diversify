@@ -2,3 +2,7 @@
 *.egg
 *.txt
 venv/*
+
+build/
+dist/
+.idea/
