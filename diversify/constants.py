@@ -1,4 +1,6 @@
+import os
+import tempfile
 
-CACHE_FILE = ".cache-diversify"
+CACHE_FILE = os.path.join(tempfile.gettempdir(), ".cache-diversify")
 
 SCOPE = ['user-library-read', 'playlist-modify-private']

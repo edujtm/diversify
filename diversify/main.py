@@ -1,8 +1,8 @@
 import warnings
-import pprint
 import click
 import sys
 import os
+import pprint
 import pandas as pd
 import diversify.genetic as gen
 import diversify.utils as utils
@@ -19,7 +19,7 @@ def get_songs(spfy, userid):
     try:
         return pd.read_csv('csvfiles/' + userid + 'features.csv')
     except FileNotFoundError:
-        result = spfy.get_user_playlists(userid, features=True)
+        result = spfy.get_user_playlists(userid, features=True, flat=True)
         return pd.DataFrame(result)
 
 
