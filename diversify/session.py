@@ -25,7 +25,7 @@ from typing import List, Callable, Any, Tuple, \
 import numpy as np
 import spotipy
 import spotipy.util as util
-from asyncutils import AsyncPaginator
+from diversify.asyncutils import AsyncPaginator
 from dotenv import load_dotenv
 
 load_dotenv()
