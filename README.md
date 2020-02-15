@@ -1,5 +1,7 @@
 # Diversify
 
+**Warning:** This project is still in a very alpha stage. I'm currently working on a backend for it so the user authentication becomes more friendly.
+
 ## The Project
 
 Diversify is a playlist generator based on the [Spofity WEB API](https://developer.spotify.com/web-api/) and the [Spotipy module](http://spotipy.readthedocs.io/en/latest/)
@@ -35,17 +37,14 @@ These steps are annoying but are needed because I didn't deploy this app somewhe
 
 ```Python
 from diversify.session import SpotifySession
-spfy = SpotifySession("username")
+spfy = SpotifySession()
 
 playlists = spfy.get_user_playlists("other_username")
 saved_songs = spfy.get_favorite_songs()
 ```
 
-- You can generate playlists by running `python3 diversify/main.py`. (run python3 diversify/main.py --help for more info) <br/>
-    Example: `python3 diversify/main.py your_id -u2 your_friend_id -p my awesome playlist`
+- You can login from the terminal by running `diversify login`
 
-## Warnings
-	
-The files in the tf/ folder and splearn.py are not used, I was trying to implement the algorithm using neural networks or clustering but i didn't finish. I'll probably remove them in the future.
+- You can generate playlists by running `diversify playlist`. (run diversify playlist --help for more info) <br/>
+    Example: `diversify playlist --friend my_friend_id my awesome playlist`
 
-I didn't run much tests when making this app, so there might be errors that I didn't check for when getting data from the spofity API. You can expect some errors when running the scripts.
