@@ -3,6 +3,8 @@
 *.txt
 venv/*
 
+# compilation files
+__pycache__/
 build/
 dist/
 .idea/

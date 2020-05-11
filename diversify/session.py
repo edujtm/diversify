@@ -49,6 +49,26 @@ Playlist = Tuple[str, List[SongMetadata]]
 JsonObject = Dict[str, Any]
 
 
+def _get_session(authenticate: bool = True) -> spotipy.Spotify:
+    if not os.getenv('SPOTIPY_CLIENT_ID'):
+        raise SystemExit(
+            "Spotify application credentials are missing. Rename .env.example to .env and"
+            " fill in the values"
+        )
+    if authenticate:
+        token = utils.login_user()
+    else:
+        token = utils.cached_token(scope=SCOPE)
+
+    if token:
+        return spotipy.Spotify(auth=token)
+    else:
+        if authenticate:
+            raise utils.DiversifyError(f"Unable to log in to your account")
+        else:
+            raise utils.DiversifyError("You are not logged in. Run [diversify login USERNAME] to log in.")
+
+
 class SpotifySession:
     def __init__(self, authenticate: bool = True):
         """
@@ -63,7 +83,7 @@ class SpotifySession:
         :param authenticate: If true, use web browser authentication, else cached info.
         """
 
-        self._session = self._get_session(authenticate)
+        self._session = _get_session(authenticate)
         self._current_user = self._session.current_user()['id']
 
     def _for_all(self, json_response: JsonObject, func: Callable[[JsonObject], List[Any]]) -> List[Any]:
@@ -125,24 +145,7 @@ class SpotifySession:
             ftrack = {field: track[field] for field in _fields}
             yield ftrack
 
-    def _get_session(self, authenticate: bool = True) -> spotipy.Spotify:
-        if not os.getenv('SPOTIPY_CLIENT_ID'):
-            raise SystemExit(
-                "Spotify application credentials are missing. Rename .env.example to .env and"
-                " fill in the values"
-            )
-        if authenticate:
-            token = utils.login_user()
-        else:
-            token = utils.cached_token(scope=SCOPE)
-
-        if token:
-            return spotipy.Spotify(auth=token)
-        else:
-            if authenticate:
-                raise utils.DiversifyError(f"Unable to log in to your account")
-            else:
-                raise utils.DiversifyError("You are not logged in. Run [diversify login USERNAME] to log in.")
+    
 
     def get_features(self, tracks: List[SongMetadata], limit: int = 10) -> List[AudioFeatures]:
         """
