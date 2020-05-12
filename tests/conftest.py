@@ -10,3 +10,4 @@ def spotify_env(monkeypatch):
     monkeypatch.setenv('SPOTIPY_CLIENT_SECRET', client_secret)
     monkeypatch.setenv('SPOTIPY_REDIRECT_URI', redirect_uri)
     return client_id, client_secret, redirect_uri
+
