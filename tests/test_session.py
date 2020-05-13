@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, call
 import pytest
 from faker import Faker
 import spotipy as spt
@@ -6,6 +6,9 @@ from diversify.session import SpotifySession, _get_session, _fields
 
 fake = Faker()
 Faker.seed(0)
+
+# I'm using this project as a way to learn how to test functions
+# and isolate dependencies, so there might be a bunch of useless tests here
 
 # ------  Fixtures  -------
 
@@ -22,18 +25,36 @@ def mocked_spotify_session(mocker):
     return SpotifySession()
 
 
-def audio_features():
+def audio_features(song_id=None):
+    if song_id is None:
+        song_id = fake.pyint()
+
     features = {}
-    features['id'] = fake.pyint()
+    features['id'] = song_id
     features['speechiness'] = fake.pyfloat(min_value=0.0, max_value=1.0)
     features['valence'] = fake.pyfloat(min_value=0.0, max_value=1.0)
     features['mode'] = int(fake.pybool())
     features['liveness'] = fake.pyfloat(min_value=0.0, max_value=1.0)
     features['key'] = fake.pyint(min_value=0.0, max_value=1.0)
     features['danceability'] = fake.pyfloat(min_value=0.0, max_value=1.0)
+    features['instrumentalness'] = fake.pyfloat(min_value=0.0, max_value=1.0)
+    features['energy'] = fake.pyfloat(min_value=0.0, max_value=1.0)
+    features['tempo'] = fake.pyfloat(min_value=50.0, max_value=150.0)
     features['loudness'] = fake.pyfloat(min_value=-60.0, max_value=1.0)
     features['acousticness'] = fake.pyfloat(min_value=0.0, max_value=1.0)
     return features
+
+
+def song_metadata():
+    song_meta = {}
+    song_meta['id'] = fake.pyint()
+    song_meta['name'] = " ".join(fake.words())
+    song_meta['popularity'] = fake.pyint(min_value=0, max_value=100)
+    song_meta['duration_ms'] = fake.pyint()
+    song_meta['album'] = " ".join(fake.words(nb=2))
+    song_meta['artist'] = fake.name()
+    song_meta['artist_id'] = fake.pyint()
+    return song_meta
 
 
 def paginated_object(values):
@@ -108,3 +129,63 @@ def test_write_csv_file(tmpdir, mocked_spotify_session):
     # with a csv header of the feature fields
     assert contents[0].rstrip('\n') == ",".join(_fields)
 
+
+def test_filter_audio_features():
+    # GIVEN: a list of audio features
+    some_features = [audio_features() for _ in range(10)]
+    for audio_feat in some_features:
+        audio_feat['stub'] = 'testing'
+        audio_feat['some_other'] = 'feature'
+
+    # WHEN: filter audio features is called
+    gen = SpotifySession._filter_audio_features(some_features)
+    result = list(gen)
+
+    # THEN: the unwanted features should be removed
+    assert result[0].get('stub') is None
+    assert result[0].get('some_other') is None
+
+
+@patch('diversify.session.spotipy.Spotify.audio_features')
+def test_session_get_features(mocked_audio_features, mocked_spotify_session):
+    # GIVEN: a spotify session and a list of spotify
+    # tracks
+    songs = [song_metadata() for _ in range(20)]
+    mocked_audio_features.side_effect = (lambda songs: [audio_features(song_id) for song_id in songs])
+
+    # WHEN: get_features is called
+    features = mocked_spotify_session.get_features(songs)
+
+    # Then a list of audio features is returned for each song
+    assert all([song['id'] == audio_feat['id'] for song, audio_feat in zip(songs, features)])
+    # and the api is called twice, since the limit is 10
+    assert mocked_audio_features.call_count == 2
+
+
+@pytest.mark.skip(reason="still dont know how to generate base64 id")
+def test_get_features_should_raise_if_limit_too_high(mocked_spotify_session):
+    # GIVEN: a spotify session and a list of spotify tracks
+    songs = [song_metadata() for _ in range(30)]
+
+    # WHEN: get_features is called with a high limit
+    features = mocked_spotify_session.get_features(songs, limit=101)
+
+
+@patch('diversify.session.SpotifySession._for_all')
+@patch('diversify.session.spotipy.Spotify.current_user_saved_tracks')
+def test_get_favorite_songs(
+        mocked_saved_tracks,
+        mocked_for_all,
+        mocked_spotify_session):
+    songs = [song_metadata() for _ in range(20)]
+    songs_po = paginated_object(songs)
+    first_page = next(songs_po)
+    
+    mocked_saved_tracks.side_effect = (lambda limit: first_page)
+    result = mocked_spotify_session.get_favorite_songs()
+
+    # THEN: All of the pages with saved user songs should be gathered 
+    assert result == mocked_for_all.return_value
+    # for all should be called with get_song_info and the first page
+    assert mocked_for_all.call_args == call(first_page, SpotifySession._get_song_info)
+     
