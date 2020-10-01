@@ -54,25 +54,46 @@ Playlist = Tuple[str, List[SongMetadata]]
 JsonObject = Dict[str, Any]
 
 
+def _get_session(authenticate: bool = True) -> spotipy.Spotify:
+    if not os.getenv('SPOTIPY_CLIENT_ID'):
+        raise SystemExit(
+            "Spotify application credentials are missing. Rename .env.example to .env and"
+            " fill in the values"
+        )
+    if authenticate:
+        token = utils.login_user()
+    else:
+        token = utils.cached_token(scope=SCOPE)
+
+    if token:
+        return spotipy.Spotify(auth=token)
+    else:
+        if authenticate:
+            raise utils.DiversifyError(f"Unable to log in to your account")
+        else:
+            raise utils.DiversifyError("You are not logged in. Run [diversify login USERNAME] to log in.")
+
+
 class SpotifySession:
     def __init__(self, authenticate: bool = True):
         """
         Logs the user to the Spotify WEB API with permissions declared in scope.
         Default permissions are 'user-library-read' and 'playlist-modify-private'.
-        The return object is necessary to make further spotify queries, so this
+        The session object is necessary to make further spotify queries, so this
         should be the first method to be called when using this module.
 
-        If the username is not passed, it'll get information from cache. In other
+        If the authenticate is false, it'll get information from cache. In other
         words, it assumes it's already logged.
 
         :param authenticate: If true, use web browser authentication, else cached info.
         """
 
-        self._session = self._get_session(authenticate)
+        self._session = _get_session(authenticate)
         self._current_user = self._session.current_user()['id']
 
     def _for_all(self, json_response: JsonObject, func: Callable[[JsonObject], List[Any]]) -> List[Any]:
         """
+        Requests all pages from a paginated response.
 
         :param json_response: A pagination object returned from a http request
         :param func: Function that parses a pagination object into a list of objects
@@ -136,25 +157,6 @@ class SpotifySession:
             ftrack = {field: track[field] for field in _fields}
             yield ftrack
 
-    def _get_session(self, authenticate: bool = True) -> spotipy.Spotify:
-        if not os.getenv('SPOTIPY_CLIENT_ID'):
-            raise SystemExit(
-                "Spotify application credentials are missing. Rename .env.example to .env and"
-                " fill in the values"
-            )
-        if authenticate:
-            token = utils.login_user()
-        else:
-            token = utils.cached_token(scope=SCOPE)
-
-        if token:
-            return spotipy.Spotify(auth=token)
-        else:
-            if authenticate:
-                raise utils.DiversifyError(f"Unable to log in to your account")
-            else:
-                raise utils.DiversifyError("You are not logged in. Run [diversify login USERNAME] to log in.")
-
     def get_features(self, tracks: List[SongMetadata], limit: int = 10) -> List[AudioFeatures]:
         """
         Queries the spotify WEB API for the features of a list of songs
@@ -203,8 +205,8 @@ class SpotifySession:
             Queries the spotify WEB API for the musics in the public playlists
             from the user with the userid (Spotify ID).
 
-            if userid is not passed, it will get the playlists songs from the current
-            logged user.
+            if userid is not passed, it will get the playlists songs from the
+            current logged user.
 
             The limit is the number of songs per playlists that will be returned.
 
@@ -313,7 +315,11 @@ class SpotifySession:
 
         self._write_csv(featarray, filename)
 
-    def playlist_to_csv(self, playlist: List[SongMetadata], filename: Optional[str] = None) -> None:
+    def playlist_to_csv(
+            self,
+            playlist: List[SongMetadata],
+            filename: Optional[str] = None
+    ) -> None:
         """
         Writes a csv file with the features from a list with songs IDs in the
         path described by filename.

@@ -88,7 +88,11 @@ def auth_token(scope: List[str] = None) -> Optional[str]:
 
 
 def login_user() -> Optional[str]:
-    token = auth_token(scope=SCOPE)
+    # Checks if the user is already logged in
+    token = cached_token(scope=SCOPE)
+    # If it's not, retrieves the token from spotify API
+    if not token:
+        token = auth_token(scope=SCOPE)
 
     if not token:
         raise DiversifyError("Unable to login into your account")
