@@ -74,10 +74,10 @@ class SpotifySession:
         """
         Logs the user to the Spotify WEB API with permissions declared in scope.
         Default permissions are 'user-library-read' and 'playlist-modify-private'.
-        The return object is necessary to make further spotify queries, so this
+        The session object is necessary to make further spotify queries, so this
         should be the first method to be called when using this module.
 
-        If the username is not passed, it'll get information from cache. In other
+        If the authenticate is false, it'll get information from cache. In other
         words, it assumes it's already logged.
 
         :param authenticate: If true, use web browser authentication, else cached info.
@@ -87,6 +87,9 @@ class SpotifySession:
         self._current_user = self._session.current_user()['id']
 
     def _for_all(self, json_response: JsonObject, func: Callable[[JsonObject], List[Any]]) -> List[Any]:
+        """
+        Requests all pages from a paginated response.
+        """
         result = []
         while True:
             part = func(json_response)
@@ -145,8 +148,6 @@ class SpotifySession:
             ftrack = {field: track[field] for field in _fields}
             yield ftrack
 
-    
-
     def get_features(self, tracks: List[SongMetadata], limit: int = 10) -> List[AudioFeatures]:
         """
         Queries the spotify WEB API for the features of a list of songs
@@ -195,8 +196,8 @@ class SpotifySession:
             Queries the spotify WEB API for the musics in the public playlists
             from the user with the userid (Spotify ID).
 
-            if userid is not passed, it will get the playlists songs from the current
-            logged user.
+            if userid is not passed, it will get the playlists songs from the
+            current logged user.
 
             The limit is the number of songs per playlists that will be returned.
 

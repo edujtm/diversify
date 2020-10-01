@@ -9,12 +9,13 @@ Faker.seed(0)
 
 # I'm using this project as a way to learn how to test functions
 # and isolate dependencies, so there might be a bunch of useless tests here
+# and overly mocked tests that tests implementation
 
 # ------  Fixtures  -------
 
 
 @pytest.fixture()
-def mocked_spotify_session(mocker):
+def spotify_session(mocker):
     """
      Creates a spotify session object with mocked dependencies
     """
@@ -93,7 +94,7 @@ def test_get_session_from_api(mock_login_user):
 
 
 @patch('diversify.session.spotipy.Spotify.next')
-def test_session_for_all(mocked_next, mocked_spotify_session):
+def test_session_for_all(mocked_next, spotify_session):
     # GIVEN: a paginated json response from the api
     initial_values = list(range(10))
     pages = paginated_object(initial_values)
@@ -104,7 +105,7 @@ def test_session_for_all(mocked_next, mocked_spotify_session):
     mocked_next.side_effect = (lambda json_page: next(pages))
 
     # When _for_all is called
-    result = mocked_spotify_session._for_all(first_page, double_it)
+    result = spotify_session._for_all(first_page, double_it)
 
     # THEN: the result should be all the pages' values gathered
     # into a list
@@ -115,13 +116,13 @@ def test_session_for_all(mocked_next, mocked_spotify_session):
 
 # This test is kinda unecessary, since it mostly uses
 # the DictWriter from the standard library
-def test_write_csv_file(tmpdir, mocked_spotify_session):
+def test_write_csv_file(tmpdir, spotify_session):
     # GIVEN: A list of audiofeatures
     some_features = [audio_features() for _ in range(10)]
     # and a file path
     csv_file = tmpdir.join('test_features.csv')
     # WHEN: write csv is called
-    mocked_spotify_session._write_csv(some_features, str(csv_file))
+    spotify_session._write_csv(some_features, str(csv_file))
 
     contents = csv_file.readlines()
     # THEN: the contents should be written to file
@@ -147,14 +148,14 @@ def test_filter_audio_features():
 
 
 @patch('diversify.session.spotipy.Spotify.audio_features')
-def test_session_get_features(mocked_audio_features, mocked_spotify_session):
+def test_session_get_features(mocked_audio_features, spotify_session):
     # GIVEN: a spotify session and a list of spotify
     # tracks
     songs = [song_metadata() for _ in range(20)]
     mocked_audio_features.side_effect = (lambda songs: [audio_features(song_id) for song_id in songs])
 
     # WHEN: get_features is called
-    features = mocked_spotify_session.get_features(songs)
+    features = spotify_session.get_features(songs)
 
     # Then a list of audio features is returned for each song
     assert all([song['id'] == audio_feat['id'] for song, audio_feat in zip(songs, features)])
@@ -162,13 +163,13 @@ def test_session_get_features(mocked_audio_features, mocked_spotify_session):
     assert mocked_audio_features.call_count == 2
 
 
-@pytest.mark.skip(reason="still dont know how to generate base64 id")
-def test_get_features_should_raise_if_limit_too_high(mocked_spotify_session):
+@pytest.mark.skip(reason="still dont know how to generate base64 id from faker")
+def test_get_features_should_raise_if_limit_too_high(spotify_session):
     # GIVEN: a spotify session and a list of spotify tracks
     songs = [song_metadata() for _ in range(30)]
 
     # WHEN: get_features is called with a high limit
-    features = mocked_spotify_session.get_features(songs, limit=101)
+    features = spotify_session.get_features(songs, limit=101)
 
 
 @patch('diversify.session.SpotifySession._for_all')
@@ -176,16 +177,45 @@ def test_get_features_should_raise_if_limit_too_high(mocked_spotify_session):
 def test_get_favorite_songs(
         mocked_saved_tracks,
         mocked_for_all,
-        mocked_spotify_session):
+        spotify_session):
     songs = [song_metadata() for _ in range(20)]
     songs_po = paginated_object(songs)
     first_page = next(songs_po)
     
     mocked_saved_tracks.side_effect = (lambda limit: first_page)
-    result = mocked_spotify_session.get_favorite_songs()
+    result = spotify_session.get_favorite_songs()
 
-    # THEN: All of the pages with saved user songs should be gathered 
+    # THEN: All of the pages with saved user songs should be gathered
     assert result == mocked_for_all.return_value
     # for all should be called with get_song_info and the first page
     assert mocked_for_all.call_args == call(first_page, SpotifySession._get_song_info)
      
+
+@patch('diversify.session.SpotifySession._for_all')
+@patch('diversify.session.SpotifySession.get_features')
+@patch('diversify.session.spotipy.Spotify.current_user_saved_tracks')
+def test_get_favorite_songs_features(
+        mocked_saved_tracks,
+        mocked_get_features,
+        mocked_for_all,
+        spotify_session):
+
+    # mocked_for_all.side_effect = (lambda page, func: 1)
+    mocked_for_all.return_value = 1
+
+    # WHEN: get_favorite_songs is called with features=True
+    spotify_session.get_favorite_songs(features=True)
+
+    # THEN: get_features should be called with the gathered songs
+    # from the api 
+    assert mocked_get_features.call_args == call(mocked_for_all.return_value)
+
+
+@patch('diversify.session.SpotifySession._for_all')
+@patch('diversify.session.spotipy.Spotify.user_playlists')
+def test_get_user_playlists(mocked_for_all, mocked_spotipy, spotify_session):
+    
+    # WHEN: get_user_playlists is called
+    spotify_session.get_user_playlists()
+
+    # Then the result should be tuples with name of the playlist and song_metadata 
