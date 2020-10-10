@@ -12,26 +12,24 @@
     files but the music data should be saved in a database or not saved at
     all for privacy reasons.
 
-    --- IMPORTANT ---
-    All spotify objects in this module are dicts representing JSON objects defined
-    in the Spotify WEB API @link: https://developer.spotify.com/web-api/object-model/
+    All spotify objects in this module are dicts representing JSON objects
+    defined in the Spotify WEB API @link:
+    https://developer.spotify.com/web-api/object-model/
 """
 import argparse
 import csv
 import os
 import json
-import pprint
+import asyncio
 import spotipy
+import spotipy.util as util
 import numpy as np
 import diversify.utils as utils
 
 from typing import List, Callable, Any, Tuple, \
     Dict, Union, Optional, Iterator
 
-import numpy as np
-import spotipy
-import spotipy.util as util
-from diversify.asyncutils import AsyncPaginator
+from diversify.asyncutils import gather_pages
 from dotenv import load_dotenv
 from diversify.constants import SCOPE
 
@@ -71,7 +69,9 @@ def _get_session(authenticate: bool = True) -> spotipy.Spotify:
         if authenticate:
             raise utils.DiversifyError(f"Unable to log in to your account")
         else:
-            raise utils.DiversifyError("You are not logged in. Run [diversify login USERNAME] to log in.")
+            raise utils.DiversifyError(
+                "You are not logged in. Run [diversify login] to log in."
+            )
 
 
 class SpotifySession:
@@ -91,7 +91,11 @@ class SpotifySession:
         self._session = _get_session(authenticate)
         self._current_user = self._session.current_user()['id']
 
-    def _for_all(self, json_response: JsonObject, func: Callable[[JsonObject], List[Any]]) -> List[Any]:
+    def _for_all(
+            self,
+            json_response: JsonObject,
+            func: Callable[[JsonObject], List[Any]]
+    ) -> List[Any]:
         """
         Requests all pages from a paginated response.
 
@@ -99,8 +103,9 @@ class SpotifySession:
         :param func: Function that parses a pagination object into a list of objects
         :return: All the data gathered from all the pages
         """
-        paginator = AsyncPaginator(self._session, json_response)
-        jsons = paginator.run()
+        # paginator = AsyncPaginator(self._session, json_response)
+        # jsons = paginator.run()
+        jsons = asyncio.run(gather_pages(self._session, json_response))
 
         result = []
         for json in jsons:
