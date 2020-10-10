@@ -23,6 +23,13 @@ but this may improve in the future.
 	- run `pip install diversify` 
 	- run `diversify --help` to see if everything went ok.
 
+## How to run
+
+```
+$ diversify login
+$ diversify playlist PLAYLIST NAME
+```
+
 ## How to contribute
 
 - This project uses [poetry](https://python-poetry.org/) for dependency management
