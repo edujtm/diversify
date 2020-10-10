@@ -3,10 +3,6 @@ import aiohttp
 from urllib.parse import urlparse
 import time
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
 
 async def gather_pages(spfy, paging_object):
     """

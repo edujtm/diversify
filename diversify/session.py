@@ -33,10 +33,8 @@ from diversify.types import SongMetadata, AudioFeatures, SongWithFeatures, \
 from typing import List, Callable, Any, Tuple, \
     Dict, Union, Optional, Iterator
 
-from dotenv import load_dotenv
 from diversify.constants import SCOPE
 
-load_dotenv()
 
 _fields = ['id', 'speechiness', 'valence', 'mode', 'liveness', 'key',
            'danceability', 'loudness', 'acousticness', 'instrumentalness',
@@ -46,11 +44,6 @@ _limit = 50
 
 
 def _get_session(authenticate: bool = True) -> spotipy.Spotify:
-    if not os.getenv('SPOTIPY_CLIENT_ID'):
-        raise SystemExit(
-            "Spotify application credentials are missing. "
-            "Rename .env.example to .env and fill in the values"
-        )
     if authenticate:
         token = utils.login_user()
     else:

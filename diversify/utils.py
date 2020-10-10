@@ -9,13 +9,13 @@
 """
 import os
 import webbrowser
+import configparser
+from configparser import ConfigParser
+from pathlib import Path
 
 from typing import Optional, NamedTuple, List
 from spotipy import oauth2
-from diversify.constants import CACHE_FILE, SCOPE
-from dotenv import load_dotenv
-
-load_dotenv()
+from diversify.constants import CACHE_FILE, SCOPE, DIVERSIFY_FOLDER
 
 
 class SpotifyCredentials(NamedTuple):
@@ -25,11 +25,11 @@ class SpotifyCredentials(NamedTuple):
 
 
 def cached_token(scope: List[str] = None) -> Optional[str]:
-    credentials = get_env()
+    credentials = load_config(DIVERSIFY_FOLDER / 'config.ini')
 
     str_scope = ' '.join(scope)
 
-    if not credentials.client_id:
+    if not credentials.client_id or not credentials.client_secret:
         print_api_help()
         raise DiversifyError('no credentials set')
 
@@ -48,7 +48,7 @@ def cached_token(scope: List[str] = None) -> Optional[str]:
 
 
 def auth_token(scope: List[str] = None) -> Optional[str]:
-    credentials = get_env()
+    credentials = load_config(DIVERSIFY_FOLDER / 'config.ini')
 
     str_scope = ' '.join(scope)
 
@@ -111,6 +111,29 @@ def get_env() -> SpotifyCredentials:
     return SpotifyCredentials(client_id, client_secret, redirect_uri)
 
 
+def load_config(path: Path) -> SpotifyCredentials:
+    """
+        Returns the configuration options of the application.
+    """
+    try:
+        parser = ConfigParser()
+        parser.read(path)
+
+        client_secret = parser.get('spotify_api', 'client_secret')
+        client_id = parser.get('spotify_api', 'client_id')
+        redirect_uri = parser.get('spotify_api', 'redirect_uri')
+    except (
+        configparser.NoOptionError,
+        configparser.NoSectionError,
+    ) as e:
+        raise DiversifyError(
+            f"Could not read configuration files properly:\n {e.message}"
+            f"\n\ntry fixing entries in the file {path}"
+        )
+
+    return SpotifyCredentials(client_id, client_secret, redirect_uri)
+
+
 def print_api_help():
     print('''
         You need to set your Spotify API credentials. You can do this by
@@ -120,7 +143,7 @@ def print_api_help():
         export SPOTIPY_CLIENT_SECRET='your-spotify-client-secret'
         export SPOTIPY_REDIRECT_URI='your-app-redirect-url'
 
-        Get your credentials at     
+        Get your credentials at
             https://developer.spotify.com/my-applications
     ''')
 

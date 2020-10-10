@@ -8,7 +8,7 @@ import diversify.genetic as gen
 import diversify.utils as utils
 
 from diversify.session import SpotifySession
-from diversify.constants import CACHE_FILE
+from diversify.constants import CACHE_FILE, DIVERSIFY_FOLDER
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -37,7 +37,8 @@ def diversify():
     """
     Dummy function for grouping subcommands
     """
-    pass
+    if not DIVERSIFY_FOLDER.exists():
+        DIVERSIFY_FOLDER.mkdir(parents=True)
 
 
 @diversify.command()

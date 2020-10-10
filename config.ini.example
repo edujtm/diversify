@@ -1,0 +1,6 @@
+; Get your Spotify application credentials from: https://developer.spotify.com/dashboard/applications 
+; You need to whitelist the SPOTIPY_REDIRECT_URI in your application's settings
+[spotify_api]
+client_id = <insert-your-client-id>
+client_secret = <insert-your-client-secret>
+redirect_uri = https://edujtm.github.io/diversify/redirect
