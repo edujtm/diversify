@@ -23,8 +23,20 @@ def get_songs(spfy, userid):
         return pd.DataFrame(result)
 
 
+def show_songs_info(songs):
+    """
+    Shows information about songs in a playlist
+    """
+    print("song name {20* ' '}- artist {15 * ' '}- album")
+    for song in songs:
+        print(f"{song['name']:20} - {song['artist']:15} - {song['album']}")
+
+
 @click.group()
 def diversify():
+    """
+    Dummy function for grouping subcommands
+    """
     pass
 
 
@@ -51,7 +63,7 @@ def logout():
 @click.argument('playlist_name', nargs=-1, required=True)
 def playlist(friend, playlist_name):
     """
-        
+
         DIVERSIFY PLAYLIST GENERATOR
 
         ----------------------------
@@ -74,9 +86,9 @@ def playlist(friend, playlist_name):
         These steps are only necessary once and are a current limitation of the
         spotify WEB API.
 
-        If you prefer, you can also log in through the spotify website into your
-        browser and then run this program, which will not ask for your credentials
-        as you'll be already logged in.
+        If you prefer, you can also log in through the spotify website into
+        your browser and then run this program, which will not ask for your
+        credentials as you'll be already logged in.
 
         Spotify website: https://www.spotify.com/
     """
@@ -103,9 +115,9 @@ def playlist(friend, playlist_name):
     else:
         result = gen.start(spfy, my_songs)
 
-    pprint.pprint(result)
     trackids = result.index.tolist()
     spfy.tracks_to_playlist(trackids=trackids, name=plistname)
+    click.secho("\tPlaylist created sucessfully", fg='green')
 
 
 @diversify.command(short_help="downloads csv file with your saved songs")
@@ -129,10 +141,8 @@ def download(filename):
         sys.exit(1)
 
     fsongs = spfy.get_favorite_songs(features=True)
-
-    dfsongs = pd.DataFrame(fsongs)
-    pprint.pprint(dfsongs)
-    spfy.playlist_to_csv(fsongs, filename=filename)
+    show_songs_info(fsongs.songs)
+    spfy.playlist_to_csv(fsongs.features, filename=filename)
 
 
 if __name__ == '__main__':
