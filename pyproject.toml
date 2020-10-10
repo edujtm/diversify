@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "diversify"
-version = "0.1.0.3"
+version = "0.1.0.4"
 description = "A small playlist generator for spotify"
 authors = ["Eduardo Macedo <eduzemacedo@hotmail.com>"]
 readme = "README.md"
