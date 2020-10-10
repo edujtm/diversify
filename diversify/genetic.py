@@ -69,12 +69,13 @@ def select_parents(population, k=3):
 
 def remove_duplicates(indv):
     result = indv.drop_duplicates(keep='first')
-    all_data = [_user1, _nsongs]
+    all_data = _user1.append(_nsongs)
+
     if _twousers:
-        all_data += [_user2]
-    subs = np.random.choice(all_data)
+        all_data.append(_user2)
+
     while len(result.index) != 20:
-        songs = subs.sample(population_size - len(result.index))
+        songs = all_data.sample(population_size - len(result.index))
         result = result.append(songs)
         result.drop_duplicates(keep='first', inplace=True)
     return result

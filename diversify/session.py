@@ -12,48 +12,44 @@
     files but the music data should be saved in a database or not saved at
     all for privacy reasons.
 
-    --- IMPORTANT ---
-    All spotify objects in this module are dicts representing JSON objects defined
-    in the Spotify WEB API @link: https://developer.spotify.com/web-api/object-model/
+    All spotify objects in this module are dicts representing JSON objects
+    defined in the Spotify WEB API @link:
+    https://developer.spotify.com/web-api/object-model/
 """
 import argparse
 import csv
 import os
 import json
-import pprint
+import asyncio
 import spotipy
+import spotipy.util as util
 import numpy as np
+
 import diversify.utils as utils
+from diversify.asyncutils import gather_pages
+from diversify.types import SongMetadata, AudioFeatures, SongWithFeatures, \
+        JsonObject, Playlist
 
 from typing import List, Callable, Any, Tuple, \
     Dict, Union, Optional, Iterator
+
 from dotenv import load_dotenv
 from diversify.constants import SCOPE
 
 load_dotenv()
 
-_fields = ['id', 'speechiness', 'valence', 'mode', 'liveness', 'key', 'danceability', 'loudness',
-           'acousticness',
-           'instrumentalness', 'energy', 'tempo']
+_fields = ['id', 'speechiness', 'valence', 'mode', 'liveness', 'key',
+           'danceability', 'loudness', 'acousticness', 'instrumentalness',
+           'energy', 'tempo']
 
 _limit = 50
-
-# TODO move these to a types files after organizing folders
-# type hints
-
-# The song features has different fields than metadata (TypedDict would fit better here)
-AudioFeatures = Dict[str, Any]
-SongMetadata = Dict[str, Any]
-
-Playlist = Tuple[str, List[SongMetadata]]
-JsonObject = Dict[str, Any]
 
 
 def _get_session(authenticate: bool = True) -> spotipy.Spotify:
     if not os.getenv('SPOTIPY_CLIENT_ID'):
         raise SystemExit(
-            "Spotify application credentials are missing. Rename .env.example to .env and"
-            " fill in the values"
+            "Spotify application credentials are missing. "
+            "Rename .env.example to .env and fill in the values"
         )
     if authenticate:
         token = utils.login_user()
@@ -66,37 +62,46 @@ def _get_session(authenticate: bool = True) -> spotipy.Spotify:
         if authenticate:
             raise utils.DiversifyError(f"Unable to log in to your account")
         else:
-            raise utils.DiversifyError("You are not logged in. Run [diversify login USERNAME] to log in.")
+            raise utils.DiversifyError(
+                "You are not logged in. Run [diversify login] to log in."
+            )
 
 
 class SpotifySession:
     def __init__(self, authenticate: bool = True):
         """
-        Logs the user to the Spotify WEB API with permissions declared in scope.
-        Default permissions are 'user-library-read' and 'playlist-modify-private'.
-        The session object is necessary to make further spotify queries, so this
-        should be the first method to be called when using this module.
+        Logs the user to the Spotify WEB API with permissions declared in
+        scope. Default permissions are 'user-library-read' and
+        'playlist-modify-private'.
 
-        If the authenticate is false, it'll get information from cache. In other
-        words, it assumes it's already logged.
+        If the authenticate is false, it'll get information from cache. In
+        other words, it assumes it's already logged.
 
-        :param authenticate: If true, use web browser authentication, else cached info.
+        :param authenticate: If true, use web browser authentication,
+            else cached info.
         """
 
         self._session = _get_session(authenticate)
         self._current_user = self._session.current_user()['id']
 
-    def _for_all(self, json_response: JsonObject, func: Callable[[JsonObject], List[Any]]) -> List[Any]:
+    def _for_all(
+            self,
+            json_response: JsonObject,
+            func: Callable[[JsonObject], List[Any]]
+    ) -> List[Any]:
         """
         Requests all pages from a paginated response.
+
+        :param json_response: A pagination object returned from a http request
+        :param func: Function that parses a pagination object into a list of objects
+        :return: All the data gathered from all the pages
         """
+        jsons = asyncio.run(gather_pages(self._session, json_response))
+
         result = []
-        while True:
-            part = func(json_response)
-            result.extend(part)
-            if not json_response['next']:
-                break
-            json_response = self._session.next(json_response)
+        for json in jsons:
+            result.extend(func(json))
+
         return result
 
     @staticmethod
@@ -148,7 +153,11 @@ class SpotifySession:
             ftrack = {field: track[field] for field in _fields}
             yield ftrack
 
-    def get_features(self, tracks: List[SongMetadata], limit: int = 10) -> List[AudioFeatures]:
+    def get_features(
+            self,
+            tracks: List[SongMetadata],
+            limit: int = 10
+    ) -> List[AudioFeatures]:
         """
         Queries the spotify WEB API for the features of a list of songs
         as described by the Audio Analysis object from the Spotify object
@@ -176,7 +185,10 @@ class SpotifySession:
 
         return all_feat
 
-    def get_favorite_songs(self, features: bool = False) -> Union[List[SongMetadata], List[AudioFeatures]]:
+    def get_favorite_songs(
+        self,
+        features: bool = False
+    ) -> Union[List[SongMetadata], SongWithFeatures]:
         local_limit = 50
 
         results = self._session.current_user_saved_tracks(local_limit)
@@ -184,14 +196,18 @@ class SpotifySession:
         songs = self._for_all(results, self._get_song_info)
 
         if features:
-            return self.get_features(songs)
+            song_features = self.get_features(songs)
+            return SongWithFeatures(songs, song_features)
         else:
             return songs
 
-    def get_user_playlists(self, userid: Optional[str] = None,
-                           limit: int = 10,
-                           features: bool = False,
-                           flat: bool = False):
+    def get_user_playlists(
+            self,
+            userid: Optional[str] = None,
+            limit: int = 10,
+            features: bool = False,
+            flat: bool = False
+    ):
         """
             Queries the spotify WEB API for the musics in the public playlists
             from the user with the userid (Spotify ID).
@@ -306,7 +322,11 @@ class SpotifySession:
 
         self._write_csv(featarray, filename)
 
-    def playlist_to_csv(self, playlist: List[SongMetadata], filename: Optional[str] = None) -> None:
+    def playlist_to_csv(
+            self,
+            playlist: List[SongMetadata],
+            filename: Optional[str] = None
+    ) -> None:
         """
         Writes a csv file with the features from a list with songs IDs in the
         path described by filename.
@@ -379,8 +399,8 @@ if __name__ == '__main__':
 
     fsongs = sp.get_favorite_songs(features=True)
 
-    dfsongs = pd.DataFrame(fsongs)
+    dfsongs = pd.DataFrame(fsongs.songs)
     pprint.pprint(dfsongs)
 
     path = 'csvfiles/' + fname + '.csv'
-    sp.playlist_to_csv(fsongs, filename=path)
+    sp.playlist_to_csv(fsongs.features, filename=path)

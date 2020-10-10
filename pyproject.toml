@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "diversify"
+version = "0.1.0.3"
+description = "A small playlist generator for spotify"
+authors = ["Eduardo Macedo <eduzemacedo@hotmail.com>"]
+readme = "README.md"
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.7"
+numpy = "^1.19.2"
+pandas = "^1.1.2"
+spotipy = "^2.16.0"
+python-dotenv = "^0.14.0"
+click = "^7.1.2"
+aiohttp = "^3.6.2"
+colorama = "^0.4.3"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+pytest-mock = "^3.3.1"
+pytest-cov = "^2.10.1"
+Faker = "^4.1.5"
+
+[tool.poetry.scripts]
+diversify = "diversify.main:diversify"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

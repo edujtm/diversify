@@ -33,7 +33,11 @@ def cached_token(scope: List[str] = None) -> Optional[str]:
         print_api_help()
         raise DiversifyError('no credentials set')
 
-    sp_oauth = oauth2.SpotifyOAuth(*credentials, scope=str_scope, cache_path=CACHE_FILE)
+    sp_oauth = oauth2.SpotifyOAuth(
+        *credentials,
+        scope=str_scope,
+        cache_path=CACHE_FILE
+    )
 
     token_info = sp_oauth.get_cached_token()
 
