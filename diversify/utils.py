@@ -119,9 +119,9 @@ def load_config(path: Path) -> SpotifyCredentials:
         parser = ConfigParser()
         parser.read(path)
 
-        client_secret = parser.get('spotify_api', 'client_secret')
-        client_id = parser.get('spotify_api', 'client_id')
-        redirect_uri = parser.get('spotify_api', 'redirect_uri')
+        client_secret = os.getenv("DIVERSIFY_CLIENT_SECRET") or parser.get('spotify_api', 'client_secret')
+        client_id = os.getenv("DIVERSIFY_CLIENT_ID") or parser.get('spotify_api', 'client_id')
+        redirect_uri = os.getenv("DIVERSIFY_REDIRECT_URI") or parser.get('spotify_api', 'redirect_uri')
     except (
         configparser.NoOptionError,
         configparser.NoSectionError,

@@ -1,7 +1,6 @@
 import asyncio
 import aiohttp
 from urllib.parse import urlparse
-import time
 
 
 async def gather_pages(spfy, paging_object):
@@ -71,9 +70,9 @@ def offset_urls(url, total, limit):
 if __name__ == '__main__':
     """
         Comparison between synchronous and asynchronous execution.
-        *** 
-        This is not comparing it anymore, since both implementation are actually using
-        the paginator
+        ***
+        This is not comparing it anymore, since both implementation are
+        actually using the paginator
         ***
     """
     from interfacespfy import SpotifySession
